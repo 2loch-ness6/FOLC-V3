@@ -1,6 +1,6 @@
 # PHASE 2 DIRECTIVE: FRONT DOOR STANDARDIZATION
 
-**Document Version:** 2.0
+**Document Version:** 2.1
 **Date:** January 2026
 **Status:** ACTIVE
 **Reference:** Supersedes Phase 1 Backdoor Usage
@@ -19,19 +19,30 @@
 - `/bin/su` has been replaced with a SUID-root `busybox` binary.
 - Root password has been removed from `/etc/passwd`.
 - `adb shell su -c "id"` returns `uid=0(root)`.
+- **Init scripts consolidated:** Single enhanced minimal version at `exploits/orbital_os_init.sh`
 
 ---
 
 ## 2. Mission Objective
 
 **Deprecate the Backdoor:**
-While the Port 9999 backdoor remains active as a failsafe/init service, it should **NO LONGER** be the primary method for interaction. All tools and scripts must be updated to use the standard Android/Linux `adb shell su` paradigm.
+The Port 9999 backdoor is now **optional and redundant**. The primary method for root access is `adb shell su` (Front Door). The backdoor remains available as a fallback mechanism only, started by the init script with low priority.
+
+**Init Script Consolidation:**
+Two previous implementations have been merged into a single enhanced minimal version:
+- ✅ Single script at `exploits/orbital_os_init.sh` (~126 lines)
+- ✅ Includes logging, status checking, and proper command structure
+- ✅ Treats backdoor as optional fallback (not primary access)
+- ✅ Maintains simplicity and readability
+
+All tools and scripts must be updated to use the standard Android/Linux `adb shell su` paradigm.
 
 **Architect (Copilot) Responsibilities:**
 1.  **Audit** all existing scripts (`tools/*.sh`, `*.py`) for `nc ... 9999` usage.
 2.  **Refactor** these scripts to use `adb shell su -c "..."`.
 3.  **Update** documentation to reflect the standard `su` usage.
 4.  **Verify** that `su` context provides all necessary capabilities (it does, full caps).
+5.  **Maintain** the consolidated init script at `exploits/orbital_os_init.sh`.
 
 ---
 
