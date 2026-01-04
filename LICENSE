@@ -1,0 +1,73 @@
+MIT License
+
+Copyright (c) 2026 FOLC-V3 Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+ADDITIONAL TERMS AND CONDITIONS:
+
+1. LEGAL COMPLIANCE
+   This software is intended for authorized security testing and educational
+   purposes only. Users must comply with all applicable laws and regulations
+   in their jurisdiction. The license does NOT grant permission to:
+   - Access networks or systems without authorization
+   - Violate terms of service with carriers or vendors
+   - Conduct illegal surveillance or data interception
+   - Use the software for malicious purposes
+
+2. WARRANTY DISCLAIMER
+   Modifying devices using this software will likely void manufacturer
+   warranties. The authors are not responsible for:
+   - Damaged or "bricked" devices
+   - Voided warranties
+   - Violations of carrier terms of service
+   - Legal consequences of misuse
+   - Any damages resulting from use of this software
+
+3. NO ENDORSEMENT
+   This project is not affiliated with, endorsed by, or sponsored by:
+   - Orbic (manufacturer)
+   - Verizon, T-Mobile, AT&T or any carrier
+   - Qualcomm Technologies, Inc.
+   - Google (Android)
+
+4. EXPORT RESTRICTIONS
+   Some functionality in this software may be subject to export control
+   regulations. Users are responsible for compliance with:
+   - U.S. Export Administration Regulations (EAR)
+   - International Traffic in Arms Regulations (ITAR)
+   - Local export control laws
+
+5. RESPONSIBLE DISCLOSURE
+   If you discover security vulnerabilities:
+   - Report them responsibly (see SECURITY.md)
+   - Do not use them for malicious purposes
+   - Give maintainers time to fix before public disclosure
+
+6. CONTRIBUTION
+   By contributing to this project, you agree that:
+   - Your contributions will be licensed under the same terms
+   - You have the right to make the contribution
+   - Your contribution does not violate any third-party rights
+   - You understand the ethical implications
+
+BY USING THIS SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ AND UNDERSTOOD
+THESE TERMS AND AGREE TO USE THE SOFTWARE RESPONSIBLY AND LEGALLY.

@@ -1,0 +1,17 @@
+# Python dependencies for FOLC-V3
+
+# Core dependencies (for device)
+evdev>=1.6.0        # Input device handling
+Pillow>=9.0.0       # Framebuffer graphics
+
+# Optional dependencies (for development/web features)
+# Uncomment if needed:
+
+# Flask>=2.3.0         # Web dashboard
+# flask-socketio>=5.3.0  # Real-time updates
+# requests>=2.31.0     # HTTP client
+# paramiko>=3.0.0      # SSH automation
+# scapy>=2.5.0         # Packet manipulation (also in Alpine)
+
+# Development dependencies
+# (Install with: pip install -r requirements-dev.txt)
