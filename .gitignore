@@ -1,7 +1,50 @@
+# Device-specific files
 *.img
 *.tar.gz
-apk_cache/
 netcat
 tcpdump
 *.apk
 .SIGN.RSA.*
+
+# Alpine/Package cache
+apk_cache/
+*.cache
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Captures and logs
+*.pcap
+*.cap
+*.log
+capture.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sensitive data
+*.key
+*.pem
+credentials.txt
+secrets.txt
+
+# Build artifacts
+dist/
+build/
+*.egg-info/

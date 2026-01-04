@@ -12,10 +12,12 @@ import hashlib
 ADB_BIN = "nsenter -t 1 -m /bin/adb" 
 VERBOSE = True 
 
+# Map local files to device paths
+# Note: Local paths are relative to repository root
 LOCAL_FILES = {
-    "foac_ui_v6.py": "/data/alpine/root/foac_ui_v6.py",
-    "foac_core.py": "/data/alpine/root/foac_core.py",
-    "start_foac_v2.sh": "/data/rayhunter/start_foac_v2.sh"
+    "src/ui/foac_ui_v6.py": "/data/alpine/root/foac_ui_v6.py",
+    "src/core/foac_core.py": "/data/alpine/root/foac_core.py",
+    "tools/start_foac_v2.sh": "/data/rayhunter/start_foac_v2.sh"
 }
 
 def log(msg, level="INFO"):
