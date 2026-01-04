@@ -311,7 +311,9 @@ After deployment, Operator must verify:
 # Via ADB if still accessible
 adb shell
 su
-cp /data/rayhunter/rayhunter-daemon.bak /data/rayhunter/rayhunter-daemon
+# Find and restore the most recent backup
+ls -lah /data/rayhunter/rayhunter-daemon.backup.*
+cp /data/rayhunter/rayhunter-daemon.backup.YYYYMMDD_HHMMSS /data/rayhunter/rayhunter-daemon
 reboot
 ```
 

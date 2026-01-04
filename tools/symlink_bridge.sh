@@ -71,11 +71,14 @@ EOF
 }
 
 # Library mappings (if needed for certain binaries)
+# This function is currently empty but reserved for future use
+# when Host libraries need to be made available in Alpine
 get_library_mappings() {
+    # Intentionally empty - no library mappings needed yet
+    # Add library mappings here in future if binaries require Host libraries
+    # Example format: /lib/libnl.so:$HOST_LIB_DIR/libnl.so:Netlink library
     cat <<EOF
 EOF
-    # Add library mappings here if needed in future
-    # Example: /lib/libnl.so:$HOST_LIB_DIR/libnl.so:Netlink library
 }
 
 ################################################################################
