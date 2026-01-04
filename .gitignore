@@ -48,3 +48,5 @@ secrets.txt
 dist/
 build/
 *.egg-info/
+RE_FIRMWARE/
+analysis_bin/
