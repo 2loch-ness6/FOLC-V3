@@ -106,15 +106,39 @@ Orbic Speed (RC400L)
 
 ```
 FOLC-V3/
-├── src/
+├── src/                 # Source code
 │   ├── ui/              # User interface implementations
+│   │   └── foac_ui_v6.py   # Current UI (framebuffer-based)
 │   └── core/            # Core functionality libraries
+│       └── foac_core.py    # Wireless tools wrapper
 ├── exploits/            # Root exploit and persistence scripts
+│   ├── wrapper_v4.sh       # Active persistence exploit
+│   └── ...                 # Historical exploit versions
 ├── tools/               # Utility scripts and helpers
+│   ├── setup.sh            # Master installation script
+│   ├── deploy_foac.sh      # Deploy UI to device
+│   ├── orbic_manager.py    # Deployment manager
+│   └── ...                 # Other utilities
 ├── config/              # Configuration files
+│   ├── wifi_setup.conf     # WiFi client configuration
+│   └── tinyproxy.conf      # Proxy configuration
 ├── docs/                # Additional documentation
-└── archive/             # Deprecated/historical files
+│   ├── ROADMAP.md          # Future development plans
+│   ├── TROUBLESHOOTING.md  # Common issues and solutions
+│   ├── QUICK_REFERENCE.md  # Command quick reference
+│   ├── PROJECT_SUMMARY.md  # Detailed project analysis
+│   └── ...                 # Original research docs
+├── archive/             # Deprecated/historical files
+│   └── README.md           # Archive explanation
+├── README.md            # This file
+├── INSTALL.md           # Detailed installation guide
+├── SECURITY.md          # Security policy and best practices
+├── CONTRIBUTING.md      # Contribution guidelines
+├── LICENSE              # MIT License with additional terms
+└── requirements.txt     # Python dependencies
 ```
+
+**Note:** This repository was recently reorganized for clarity. If you have an older checkout, scripts may reference old file locations. Run `git pull` to get the latest structure.
 
 ---
 
