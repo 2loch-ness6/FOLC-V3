@@ -1,0 +1,7 @@
+*.img
+*.tar.gz
+apk_cache/
+netcat
+tcpdump
+*.apk
+.SIGN.RSA.*

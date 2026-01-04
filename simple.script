@@ -1,0 +1,6 @@
+#!/bin/sh
+echo "IP: $ip"
+echo "Router: $router"
+echo "DNS: $dns"
+ifconfig $interface $ip netmask $subnet up
+route add default gw $router

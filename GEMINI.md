@@ -1,0 +1,83 @@
+# Orbic Speed (RC400L) Exploitation Toolkit
+
+## 1. Project Overview
+This directory contains research, exploit scripts, and toolkits for modifying the **Orbic Speed 5G Hotspot (RC400L)**. The project transforms the standard hotspot into a "Bare Bones" embedded Linux security appliance capable of network auditing, packet capture, and penetration testing.
+
+**Current Status:** **FULLY ROOTED & OPERATIONAL**
+*   **Root Level:** Unrestricted (UID 0 + Full Capability Set `0000003fffffffff`).
+*   **Environment:** Hybrid (Qualcomm Embedded Linux Host + Alpine Linux 3.17 Chroot).
+*   **Control:** Remote ADB/Shell via Port 9999 Backdoor.
+
+## 2. Device Hardware & OS
+*   **Model:** Orbic Speed (RC400L) / "Orbic Speed 4G/5G"
+*   **Chipset:** Qualcomm MDM9207 (ARMv7)
+*   **Kernel:** Linux 3.18.48 (Preempt, built Nov 2020)
+*   **Firmware:** `ORB400L_V1.3.0_BVZRT_R220518`
+*   **Modem:** Qualcomm Snapdragon X12 LTE (Integrated) / 5G
+*   **Interfaces:**
+    *   `wlan0`: WiFi (Atheros/Qualcomm) - Capable of Monitor Mode/Injection.
+    *   `rmnet0`: Raw Cellular Data Interface.
+
+## 3. Exploit Methodology
+The device was rooted using a multi-stage attack:
+1.  **Initial Access:** Discovery of a suid binary `/bin/rootshell` which granted `uid=0` but with restricted capabilities (no mounting, no chroot).
+2.  **Privilege Escalation:** Identified that the `rayhunter-daemon` (an IMSI-catcher detector installed on the device) runs with **Full Capabilities**.
+3.  **Persistence (The Hijack):** The original `rayhunter-daemon` binary in `/data/rayhunter/` was replaced with a shell script wrapper (`wrapper_v4.sh`).
+4.  **Execution:** On boot, the system `init` launches our wrapper with full privileges. The wrapper mounts a custom Alpine Linux chroot and spawns a root shell backdoor on port 9999.
+
+## 4. Key Files & Scripts
+
+| File | Purpose |
+| :--- | :--- |
+| `orbic_research.md` | Initial findings and hardware research notes. |
+| `wrapper_v4.sh` | **CRITICAL.** The active persistent exploit. Replaces `rayhunter-daemon`. Mounts filesystems and spawns the backdoor. |
+| `enter_alpine.sh` | Script to mount `/proc`, `/sys`, `/dev` and chroot into Alpine manually. |
+| `apk_install.sh` | Helper to run `apk` commands via the hijacked service (Deprecated by direct backdoor access). |
+| `install_toolkit.sh` | Script that installed the security tools via the backdoor. |
+| `flipper.pl` | Perl script to hijack the framebuffer (`/dev/fb0`) and buttons, turning the device screen into a custom UI. |
+| `wifi_setup.conf` | `wpa_supplicant` configuration for connecting the device to an external hotspot. |
+| `tinyproxy.conf` | Config for the HTTP proxy used to tunnel `apk` traffic over ADB. |
+
+## 5. System Architecture
+### Filesystem Layout
+*   `/` (Root): Read-Only UBIFS (Flash).
+*   `/data`: Read-Write User Data.
+    *   `/data/alpine`: The Alpine Linux Root Filesystem.
+    *   `/data/rayhunter`: Location of the exploit persistence.
+
+### Network Configuration
+*   **Vendor Bloatware:** Disabled (`qt_daemon`, `QCMAP_ConnectionManager`, etc.) to free up `wlan0`.
+*   **Connectivity:** The device is configured to connect as a WiFi Client to a hotspot (e.g., "OnePlus12").
+*   **Routing:** Custom routing rules added to allow internet access from the Chroot.
+
+### Access Mechanism
+A persistent **Netcat Listener** runs on **Port 9999** on `localhost`.
+*   **To Connect:** `adb forward tcp:9999 tcp:9999` then `nc 127.0.0.1 9999`.
+
+## 6. Installed Security Toolkit
+The Alpine Chroot is equipped with the following tools:
+*   **Network Analysis:** `tcpdump`, `nmap`, `scapy`, `wireshark-common`
+*   **Wireless Audit:** `aircrack-ng`, `iw`, `wireless-tools`
+*   **Utilities:** `tmux`, `htop`, `python3`, `neofetch`, `pip`
+
+## 7. Usage Guide
+### Establishing a Session
+To drop directly into the high-privilege Alpine environment from the host machine:
+```bash
+# Ensure ADB is connected
+adb forward tcp:9999 tcp:9999
+nc 127.0.0.1 9999
+# Once connected, you are in a raw shell. To normalize:
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+chroot /data/alpine /bin/bash
+```
+
+### Restoring Vendor Functionality
+To return the device to its original Hotspot behavior:
+```bash
+# Re-enable the startup scripts
+adb shell "chmod +x /etc/init.d/start_qt_daemon /etc/init.d/start_QCMAP_ConnectionManager_le"
+# Reboot
+adb reboot
+```
+*Note: The root hijack will persist even after restoring vendor functionality.*
