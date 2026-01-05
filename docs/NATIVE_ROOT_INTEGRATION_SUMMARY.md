@@ -2,7 +2,53 @@
 
 **Status:** ✅ COMPLETE - Ready for Deployment  
 **Date:** January 2026  
-**Architecture Phase:** Transition from Service Hijack to Native Init Integration
+**Architecture Phase:** Transition from Service Hijack to Native Init Integration  
+**Update:** January 2026 - Enhanced Minimal Version (v2.0)
+
+---
+
+## 🔄 Latest Update: Init Script Consolidation
+
+**Version 2.0 - Enhanced Minimal Implementation**
+
+We consolidated two different init script implementations into a single, optimized version:
+
+### Previous State
+- `exploits/orbital_os_init.sh` (541 lines) - Comprehensive but over-engineered
+- `exploits/orbital_os_native_init.sh` (54 lines) - Minimal but lacked features
+
+### Current State (v2.0)
+- **Single script:** `exploits/orbital_os_init.sh` (126 lines)
+- **Enhanced minimal approach:** Right balance of features and simplicity
+- **Phase 2 reality:** Backdoor is optional, `adb shell su` is primary access
+
+### Why Enhanced Minimal?
+
+**Rationale for the minimal approach:**
+1. **Appropriate Complexity:** The 541-line version was over-engineered for actual requirements
+2. **Phase 2 Reality:** With native `adb shell su` access, the backdoor is redundant
+3. **Maintainability:** Simpler code is easier to understand, modify, and debug
+4. **Sufficient Features:** Includes essential logging and status checking without bloat
+
+**Features retained from comprehensive version:**
+- ✅ Logging with timestamps to `/data/rayhunter/orbital_os.log`
+- ✅ Status command to check service state
+- ✅ Proper command structure (start|stop|status)
+- ✅ Simple error messages for key operations
+
+**Features removed (unnecessary complexity):**
+- ❌ PID file tracking (not needed for this use case)
+- ❌ Test mode (status command is sufficient)
+- ❌ Elaborate error recovery (fail fast is better)
+- ❌ Color-coded logging (adds complexity, limited value)
+- ❌ Restart command (can use stop then start)
+- ❌ Original daemon management (not applicable)
+
+**Backdoor treatment:**
+- Now explicitly marked as "optional fallback"
+- Comment in code: "redundant with 'adb shell su' front door"
+- Started with low priority, not treated as critical service
+- Primary access method is `adb shell su` (Front Door)
 
 ---
 
@@ -64,26 +110,33 @@ System Init → rayhunter-daemon
 
 ## 🏗️ Architecture Overview
 
-### Component 1: orbital_os_init.sh
+### Component 1: orbital_os_init.sh (Enhanced Minimal v2.0)
 
 **Location:** `/data/rayhunter/rayhunter-daemon` (replaces current wrapper)
 
 **Features:**
-- **Service Commands:** `start`, `stop`, `restart`, `status`, `test`
+- **Service Commands:** `start`, `stop`, `status` (streamlined, no restart/test)
 - **Mount Management:** Clean mounting/unmounting of Alpine filesystems
-- **Backdoor Service:** Persistent netcat listener on port 9999
+- **Backdoor Service:** Optional netcat listener on port 9999 (fallback only)
 - **FOAC UI Integration:** Optional UI launch (non-blocking)
-- **Logging:** Comprehensive logging to `/data/rayhunter/orbital_os.log`
-- **Error Handling:** Graceful failure handling with recovery options
+- **Logging:** Timestamped logging to `/data/rayhunter/orbital_os.log`
+- **Symlink Bridge:** Integration with symlink_bridge.sh for Host/Alpine bridge
+- **Simplicity:** Only 126 lines, easy to understand and maintain
 
 **Usage:**
 ```bash
 /data/rayhunter/orbital_os_init.sh start     # Start all services
 /data/rayhunter/orbital_os_init.sh stop      # Stop all services
-/data/rayhunter/orbital_os_init.sh restart   # Restart all services
 /data/rayhunter/orbital_os_init.sh status    # Check service status
-/data/rayhunter/orbital_os_init.sh test      # Non-destructive test mode
 ```
+
+**Key Differences from v1.0:**
+- ✅ Simplified from 541 lines to 126 lines
+- ✅ Removed unnecessary PID file tracking
+- ✅ Removed test mode (use status instead)
+- ✅ Removed restart command (use stop then start)
+- ✅ Backdoor explicitly marked as optional fallback
+- ✅ Focus on Phase 2 reality: `adb shell su` is primary access
 
 ### Component 2: symlink_bridge.sh
 
@@ -148,7 +201,7 @@ System Init → rayhunter-daemon
 ### Risk Level
 - **Low** - Multiple safety measures in place
 - Backups created automatically
-- Non-destructive test mode available
+- Status command available for verification
 - Easy rollback procedure
 - Original vendor functionality preserved
 
@@ -164,9 +217,10 @@ After deployment, the Operator must verify:
 - [ ] No kernel panics or crashes
 
 ### Root Access
-- [ ] Backdoor on port 9999 accessible
+- [ ] Primary access via `adb shell su` works (Front Door)
 - [ ] Shell has UID 0 (root)
 - [ ] Full capabilities (0000003fffffffff)
+- [ ] Backdoor on port 9999 accessible (optional fallback)
 
 ### Alpine Environment
 - [ ] `/data/alpine/proc` mounted (type: proc)
@@ -203,18 +257,20 @@ The system will return to the previous working state.
 
 ## 📊 Comparison: Old vs New
 
-| Feature | wrapper_v4.sh | orbital_os_init.sh |
-|---------|---------------|-------------------|
-| Service Management | ❌ None | ✅ Full (start/stop/restart/status) |
-| Error Handling | ⚠️ Basic | ✅ Comprehensive |
-| Logging | ⚠️ Minimal | ✅ Detailed |
-| Testing Mode | ❌ No | ✅ Yes (non-destructive) |
+| Feature | wrapper_v4.sh | orbital_os_init.sh v2.0 |
+|---------|---------------|------------------------|
+| Service Management | ❌ None | ✅ Essential (start/stop/status) |
+| Error Handling | ⚠️ Basic | ✅ Appropriate |
+| Logging | ⚠️ Minimal | ✅ Timestamped logs |
 | Status Checking | ❌ No | ✅ Yes |
-| Mount Management | ⚠️ Basic | ✅ Advanced with verification |
+| Mount Management | ⚠️ Basic | ✅ Clean with explicit error logging |
 | Symlink Integration | ❌ No | ✅ Yes (via symlink_bridge.sh) |
 | Documentation | ⚠️ Minimal | ✅ Extensive |
 | Rollback Support | ⚠️ Manual | ✅ Documented procedure |
-| Code Quality | ⚠️ Functional | ✅ Production-ready |
+| Code Quality | ⚠️ Functional | ✅ Clean and maintainable |
+| Line Count | ~60 lines | 126 lines (optimized) |
+| Backdoor Status | Primary access | Optional fallback |
+| Complexity Level | Too simple | Just right |
 
 ---
 
@@ -296,14 +352,15 @@ orbital_os_init.sh status
 # View logs
 tail -f /data/rayhunter/orbital_os.log
 
-# Restart if needed
-orbital_os_init.sh restart
+# Restart if needed (stop then start)
+orbital_os_init.sh stop
+orbital_os_init.sh start
 ```
 
 ### Troubleshooting
 ```bash
-# Test mode (non-destructive)
-orbital_os_init.sh test
+# Check service status
+orbital_os_init.sh status
 
 # Verify symlinks
 symlink_bridge.sh verify
