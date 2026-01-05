@@ -68,9 +68,8 @@ class UI:
             self.scanning_thread.join(timeout=2.0)
             # Check if thread actually terminated
             if self.scanning_thread.is_alive():
-                # Log warning: thread didn't terminate within timeout
-                # In production, could force-kill or raise an alert
-                pass  # Thread continues running, but we lose the reference
+                # Thread didn't terminate - log to stderr
+                print("WARNING: Scanning thread did not terminate within timeout", file=sys.stderr)
         self.scanning_thread = None
 
     def context_menu(self):
@@ -304,7 +303,7 @@ def main():
                 # 1. Hardware scan completes but _scan_task crashes before updating state
                 # 2. Thread completes during the select() timeout window
                 # Join the thread to ensure all state updates are complete
-                ui.scanning_thread.join(timeout=0.1)
+                ui.scanning_thread.join(timeout=0.5)
                 # Use lock to safely check state after thread completion
                 with ui.state_lock:
                     # Only transition if _scan_task didn't already update state
