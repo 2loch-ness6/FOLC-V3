@@ -265,13 +265,8 @@ def main():
     ui = UI()
     ui.draw()
     
-    # Setup signal handler for clean exit
-    def signal_handler(signum, frame):
-        ui.cleanup()
-        sys.exit(0)
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    # Signals are handled by default; cleanup is performed by the main loop's
+    # normal control flow and any associated finally blocks.
     
     # Auto-detect all input devices
     devices = []
