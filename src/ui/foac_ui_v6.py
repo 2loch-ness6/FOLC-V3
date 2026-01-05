@@ -188,11 +188,8 @@ class UI:
 
     def cancel_scan(self):
         if self.state == "SCANNING":
-            self.stop_scan = True
-            # Wait for thread to complete
-            if self.scanning_thread and self.scanning_thread.is_alive():
-                self.scanning_thread.join(timeout=2.0)
-            self.scanning_thread = None
+            # Delegate thread cleanup to the shared cleanup routine
+            self.cleanup()
             self.state = "MENU"
             self.status_msg = "ABORTED"
             self.draw()
