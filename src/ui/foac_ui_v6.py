@@ -58,13 +58,19 @@ class UI:
         self.status_msg = "READY"
         self.scan_idx = 0
         self.scanning_thread = None
-        self.stop_scan = False
+        self.stop_scan_event = threading.Event()  # Thread-safe flag
+        self.state_lock = threading.Lock()  # Protects state transitions
 
     def cleanup(self):
         """Clean up resources, especially threads"""
         if self.scanning_thread and self.scanning_thread.is_alive():
-            self.stop_scan = True
+            self.stop_scan_event.set()
             self.scanning_thread.join(timeout=2.0)
+            # Check if thread actually terminated
+            if self.scanning_thread.is_alive():
+                # Log warning: thread didn't terminate within timeout
+                # In production, could force-kill or raise an alert
+                pass  # Thread continues running, but we lose the reference
         self.scanning_thread = None
 
     def context_menu(self):
@@ -178,12 +184,13 @@ class UI:
             results = [("DEMO_NET", "00:11:22:33:44:55", "-50")]
         
         # Only update if not aborted
-        if not self.stop_scan:
-            self.results = results
-            self.scan_idx = 0
-            self.state = "RESULT"
-            self.status_msg = "SELECT TGT"
-            self.scanning_thread = None
+        if not self.stop_scan_event.is_set():
+            with self.state_lock:
+                self.results = results
+                self.scan_idx = 0
+                self.state = "RESULT"
+                self.status_msg = "SELECT TGT"
+                self.scanning_thread = None
             self.draw()
 
     def cancel_scan(self):
@@ -201,7 +208,7 @@ class UI:
             if item == "SCAN FREQUENCIES":
                 self.state = "SCANNING"
                 self.status_msg = "SCANNING"
-                self.stop_scan = False
+                self.stop_scan_event.clear()  # Reset event for new scan
                 self.draw()
                 # Start Thread
                 self.scanning_thread = threading.Thread(target=self._scan_task)
@@ -296,17 +303,22 @@ def main():
                 # Thread finished but state wasn't updated. This can occur if:
                 # 1. Hardware scan completes but _scan_task crashes before updating state
                 # 2. Thread completes during the select() timeout window
-                # Ensure UI state is consistent with thread lifecycle
-                ui.scanning_thread = None
-                ui.stop_scan = False  # Reset flag for future scans
-                # Check if results were populated before transitioning state
-                if ui.results:
-                    ui.state = "RESULT"
-                    ui.status_msg = "SELECT TGT"
-                else:
-                    ui.state = "MENU"
-                    ui.status_msg = "SCAN DONE"
-                ui.draw()
+                # Join the thread to ensure all state updates are complete
+                ui.scanning_thread.join(timeout=0.1)
+                # Use lock to safely check state after thread completion
+                with ui.state_lock:
+                    # Only transition if _scan_task didn't already update state
+                    if ui.state == "SCANNING":
+                        ui.scanning_thread = None
+                        ui.stop_scan_event.clear()  # Reset event for future scans
+                        # Check if results were populated before transitioning state
+                        if ui.results:
+                            ui.state = "RESULT"
+                            ui.status_msg = "SELECT TGT"
+                        else:
+                            ui.state = "MENU"
+                            ui.status_msg = "SCAN DONE"
+                        ui.draw()
 
             if not r: continue
 
