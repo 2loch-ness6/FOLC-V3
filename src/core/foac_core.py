@@ -1,7 +1,6 @@
 import subprocess
 import re
 import time
-import os
 
 class CellularTool:
     def __init__(self, interface="rmnet_data0"):
@@ -23,7 +22,8 @@ class CellularTool:
                 if "inet" in line:
                     info["ip"] = line.split()[1].split('/')[0]
                     info["state"] = "CONNECTED"
-        except:
+        except Exception as e:
+            print(f"[CellularTool] Failed to get interface info: {e}")
             info["state"] = "DOWN"
 
         return info
@@ -34,7 +34,8 @@ class CellularTool:
             time.sleep(1)
             subprocess.run(["ifconfig", self.interface, "up"])
             return True
-        except:
+        except Exception as e:
+            print(f"[CellularTool] Failed to restart interface: {e}")
             return False
 
 class WirelessTool:

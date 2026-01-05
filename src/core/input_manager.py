@@ -59,7 +59,8 @@ class InputManager:
                         dev = evdev.InputDevice(os.path.join("/dev/input", path))
                         self.devices.append(dev)
                         print(f"[INPUT] Found: {dev.name}")
-                    except: pass
+                    except Exception as e:
+                        print(f"[INPUT] Failed to initialize device '/dev/input/{path}': {e}")
         except Exception as e:
             print(f"[INPUT] Error scanning devices: {e}")
 
@@ -102,8 +103,10 @@ class InputManager:
         # LOGIC: POWER BUTTON
         if is_power or event.code == KEY_POWER:
             if event.value == 1: # DOWN
-                self.power_down_time = now
-                self.power_is_down = True
+                # Prevent bounce: only update if not in debounce window
+                if not self.power_is_down or (now - self.power_down_time) > self.debounce_window:
+                    self.power_down_time = now
+                    self.power_is_down = True
             elif event.value == 0: # UP
                 if not self.power_is_down: return # Glitch or startup state
                 self.power_is_down = False

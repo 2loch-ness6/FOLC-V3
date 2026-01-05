@@ -4,7 +4,7 @@ set -e
 echo "[*] Checking ADB connection..."
 adb devices
 if ! adb devices | grep -q "device$"; then
-    echo "[-] No ADB device found. Please connect the Orbic Speed via USB or TCP."
+    echo "[-] No ADB device found. Please connect a device via USB or ensure ADB over TCP is enabled."
     exit 1
 fi
 

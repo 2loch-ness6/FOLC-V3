@@ -1,7 +1,6 @@
 from flask import Flask, render_template, jsonify
 import subprocess
 import os
-import json
 
 app = Flask(__name__)
 
@@ -38,7 +37,7 @@ def api_logs():
     try:
         if os.path.exists(STATUS_FILE):
             # Using tail to get last 50 lines
-            result = subprocess.check_output(['tail', '-n', '50', STATUS_FILE])
+            result = subprocess.check_output(['tail', '-n', '50', STATUS_FILE], shell=False)
             return jsonify({"logs": result.decode('utf-8')})
         else:
             return jsonify({"logs": "Log file not found."})
@@ -47,4 +46,5 @@ def api_logs():
 
 if __name__ == '__main__':
     # Running on 0.0.0.0 to be accessible externally
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    debug = os.getenv("FLASK_DEBUG", "0") in ("1", "true", "True")
+    app.run(host='0.0.0.0', port=8080, debug=debug)

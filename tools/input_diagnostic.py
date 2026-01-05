@@ -1,6 +1,4 @@
 import evdev
-import time
-import sys
 import os
 from select import select
 
