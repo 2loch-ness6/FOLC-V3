@@ -303,10 +303,10 @@ def main():
             if ui.state == "SCANNING" and ui.scanning_thread and not ui.scanning_thread.is_alive():
                 # Thread finished but state wasn't updated (shouldn't happen normally)
                 # Ensure UI is consistent
-                if ui.state == "SCANNING":
-                    ui.state = "MENU"
-                    ui.status_msg = "SCAN DONE"
-                    ui.draw()
+                ui.scanning_thread = None
+                ui.state = "MENU"
+                ui.status_msg = "SCAN DONE"
+                ui.draw()
 
             if not r: continue
 
