@@ -1,19 +1,24 @@
-import evdev
 import struct
 import time
 import subprocess
 import threading
 import sys
 import os
-from select import select
 from PIL import Image, ImageDraw, ImageFont
 
 # Import functional core
 try:
     import foac_core
+    from input_manager import InputManager
+    
     WIFI = foac_core.WirelessTool("wlan0")
-except ImportError:
+    CELL = foac_core.CellularTool("rmnet_data0")
+    INPUT = InputManager()
+except ImportError as e:
+    print(f"Import Error: {e}")
     WIFI = None
+    CELL = None
+    INPUT = None
 
 # --- CONFIG ---
 FB_PATH = "/dev/fb0"
@@ -28,10 +33,6 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 ORANGE = (255, 165, 0)
 GRAY = (50, 50, 50)
-
-# Input Config
-CODE_POWER = 116
-DEBOUNCE_DELAY = 0.3
 
 def draw_fb(image):
     pixels = image.load()
@@ -58,7 +59,34 @@ class UI:
         self.scan_idx = 0
         self.scanning_thread = None
         self.stop_scan = False
+        
+        # Init Input Manager
+        if INPUT:
+            INPUT.callback = self.handle_input
+            INPUT.start()
 
+    def handle_input(self, event):
+        """Callback for InputManager events"""
+        print(f"UI Received: {event.action} from {event.source}")
+        
+        if event.action == "SELECT":
+            if self.state == "SCANNING":
+                self.cancel_scan()
+            else:
+                self.select()
+                
+        elif event.action == "NEXT":
+            if self.state == "SCANNING":
+                self.cancel_scan()
+            else:
+                self.next()
+                
+        elif event.action == "CONTEXT":
+            self.context_menu()
+            
+        elif event.action == "BACK":
+            self.back()
+            
     def context_menu(self):
         # Triggered by Long Press Power
         if self.state == "RESULT" and self.results:
@@ -79,7 +107,7 @@ class UI:
         if self.state == "CONTEXT": header_color = CYAN
         
         draw.rectangle((0, 0, WIDTH, 18), fill=header_color)
-        draw.text((5, 4), "ORBITAL CANNON v2", fill=BLACK)
+        draw.text((5, 4), "ORBITAL CANNON v3", fill=BLACK)
         
         status_color = GREEN
         if "SCAN" in self.status_msg: status_color = CYAN
@@ -139,8 +167,15 @@ class UI:
         elif self.state == "CONTEXT":
             # Detail View
             if "SYS" in self.status_msg:
+                # Get Cell Info
+                cell_ip = "No Net"
+                if CELL:
+                    info = CELL.get_info()
+                    if info["ip"]:
+                        cell_ip = info["ip"]
+                
                 draw.text((5, 40), "SYSTEM INFO:", fill=WHITE)
-                draw.text((5, 55), "Orbic Speed 5G", fill=GRAY)
+                draw.text((5, 55), f"Cell IP: {cell_ip}", fill=GRAY)
                 draw.text((5, 70), "Rooted: YES", fill=GREEN)
                 draw.text((5, 85), "Hold PWR: Back", fill=ORANGE)
             elif "DETAILS" in self.status_msg and self.results:
@@ -256,73 +291,12 @@ def main():
     ui = UI()
     ui.draw()
     
-    # Auto-detect all input devices
-    devices = []
+    # Main thread just waits, InputManager handles events in background
     try:
-        for path in os.listdir("/dev/input"):
-            if path.startswith("event"):
-                try:
-                    dev = evdev.InputDevice(os.path.join("/dev/input", path))
-                    devices.append(dev)
-                except: pass
-    except: pass
-
-    if not devices:
-        return
-
-    # Input Loop
-    devices_map = {dev.fd: dev for dev in devices}
-    last_press_time = 0
-    power_down_time = 0
-    
-    while True:
-        r, w, x = select(devices_map.values(), [], [], 0.5) # Timeout 0.5s to refresh
-        
-        # Check thread health or update
-        if ui.state == "SCANNING" and ui.scanning_thread and not ui.scanning_thread.is_alive():
-             pass
-
-        if not r: continue
-
-        for dev in r:
-            dev_name = dev.name.lower()
-            is_power = "pon" in dev_name or "powerkey" in dev_name
-            is_bumper = "wps" in dev_name or "reset" in dev_name
-            
-            for event in dev.read():
-                if event.type == evdev.ecodes.EV_KEY:
-                    now = time.time()
-                    
-                    if is_power:
-                        if event.value == 1: # Down
-                            power_down_time = now
-                        elif event.value == 0: # Up
-                            duration = now - power_down_time
-                            # Ignore extremely short glitches
-                            if duration < 0.05: continue
-                            
-                            if duration >= 0.8:
-                                # LONG PRESS
-                                ui.context_menu()
-                            else:
-                                # SHORT CLICK
-                                if ui.state == "SCANNING":
-                                    ui.cancel_scan()
-                                else:
-                                    ui.select()
-                    elif is_bumper:
-                        # Logic for Bumper (Scroll) - Trigger on Press
-                        if event.value == 1:
-                            if now - last_press_time < DEBOUNCE_DELAY: continue
-                            last_press_time = now
-                            
-                            if ui.state == "SCANNING":
-                                ui.cancel_scan()
-                            else:
-                                ui.next()
-                    else:
-                        # Unknown button, log it or ignore
-                        pass
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        if INPUT: INPUT.stop()
 
 if __name__ == "__main__":
     main()

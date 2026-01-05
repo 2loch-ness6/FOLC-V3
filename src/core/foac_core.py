@@ -1,6 +1,41 @@
 import subprocess
 import re
 import time
+import os
+
+class CellularTool:
+    def __init__(self, interface="rmnet_data0"):
+        self.interface = interface
+
+    def get_info(self):
+        """Returns dictionary of cellular info (IP, State, etc)"""
+        info = {
+            "interface": self.interface,
+            "ip": None,
+            "state": "UNKNOWN",
+            "signal": "N/A" # Would require AT commands or QMI
+        }
+        
+        # 1. Get IP address
+        try:
+            res = subprocess.check_output(["ip", "-4", "addr", "show", self.interface], encoding='utf-8')
+            for line in res.split('\n'):
+                if "inet" in line:
+                    info["ip"] = line.split()[1].split('/')[0]
+                    info["state"] = "CONNECTED"
+        except:
+            info["state"] = "DOWN"
+
+        return info
+
+    def restart_interface(self):
+        try:
+            subprocess.run(["ifconfig", self.interface, "down"])
+            time.sleep(1)
+            subprocess.run(["ifconfig", self.interface, "up"])
+            return True
+        except:
+            return False
 
 class WirelessTool:
     def __init__(self, interface="wlan0"):
