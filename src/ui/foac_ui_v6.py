@@ -5,6 +5,7 @@ import subprocess
 import threading
 import sys
 import os
+import signal
 from select import select
 from PIL import Image, ImageDraw, ImageFont
 
@@ -58,6 +59,12 @@ class UI:
         self.scan_idx = 0
         self.scanning_thread = None
         self.stop_scan = False
+
+    def cleanup(self):
+        """Clean up resources, especially threads"""
+        if self.scanning_thread and self.scanning_thread.is_alive():
+            self.stop_scan = True
+            self.scanning_thread.join(timeout=2.0)
 
     def context_menu(self):
         # Triggered by Long Press Power
@@ -181,6 +188,10 @@ class UI:
     def cancel_scan(self):
         if self.state == "SCANNING":
             self.stop_scan = True
+            # Wait for thread to complete
+            if self.scanning_thread and self.scanning_thread.is_alive():
+                self.scanning_thread.join(timeout=2.0)
+            self.scanning_thread = None
             self.state = "MENU"
             self.status_msg = "ABORTED"
             self.draw()
@@ -256,6 +267,14 @@ def main():
     ui = UI()
     ui.draw()
     
+    # Setup signal handler for clean exit
+    def signal_handler(signum, frame):
+        ui.cleanup()
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     # Auto-detect all input devices
     devices = []
     try:
@@ -268,6 +287,7 @@ def main():
     except: pass
 
     if not devices:
+        ui.cleanup()
         return
 
     # Input Loop
@@ -275,54 +295,62 @@ def main():
     last_press_time = 0
     power_down_time = 0
     
-    while True:
-        r, w, x = select(devices_map.values(), [], [], 0.5) # Timeout 0.5s to refresh
-        
-        # Check thread health or update
-        if ui.state == "SCANNING" and ui.scanning_thread and not ui.scanning_thread.is_alive():
-             pass
-
-        if not r: continue
-
-        for dev in r:
-            dev_name = dev.name.lower()
-            is_power = "pon" in dev_name or "powerkey" in dev_name
-            is_bumper = "wps" in dev_name or "reset" in dev_name
+    try:
+        while True:
+            r, w, x = select(devices_map.values(), [], [], 0.5) # Timeout 0.5s to refresh
             
-            for event in dev.read():
-                if event.type == evdev.ecodes.EV_KEY:
-                    now = time.time()
-                    
-                    if is_power:
-                        if event.value == 1: # Down
-                            power_down_time = now
-                        elif event.value == 0: # Up
-                            duration = now - power_down_time
-                            # Ignore extremely short glitches
-                            if duration < 0.05: continue
-                            
-                            if duration >= 0.8:
-                                # LONG PRESS
-                                ui.context_menu()
-                            else:
-                                # SHORT CLICK
+            # Check thread health - auto-transition if scan completed
+            if ui.state == "SCANNING" and ui.scanning_thread and not ui.scanning_thread.is_alive():
+                # Thread finished but state wasn't updated (shouldn't happen normally)
+                # Ensure UI is consistent
+                if ui.state == "SCANNING":
+                    ui.state = "MENU"
+                    ui.status_msg = "SCAN DONE"
+                    ui.draw()
+
+            if not r: continue
+
+            for dev in r:
+                dev_name = dev.name.lower()
+                is_power = "pon" in dev_name or "powerkey" in dev_name
+                is_bumper = "wps" in dev_name or "reset" in dev_name
+                
+                for event in dev.read():
+                    if event.type == evdev.ecodes.EV_KEY:
+                        now = time.time()
+                        
+                        if is_power:
+                            if event.value == 1: # Down
+                                power_down_time = now
+                            elif event.value == 0: # Up
+                                duration = now - power_down_time
+                                # Ignore extremely short glitches
+                                if duration < 0.05: continue
+                                
+                                if duration >= 0.8:
+                                    # LONG PRESS
+                                    ui.context_menu()
+                                else:
+                                    # SHORT CLICK
+                                    if ui.state == "SCANNING":
+                                        ui.cancel_scan()
+                                    else:
+                                        ui.select()
+                        elif is_bumper:
+                            # Logic for Bumper (Scroll) - Trigger on Press
+                            if event.value == 1:
+                                if now - last_press_time < DEBOUNCE_DELAY: continue
+                                last_press_time = now
+                                
                                 if ui.state == "SCANNING":
                                     ui.cancel_scan()
                                 else:
-                                    ui.select()
-                    elif is_bumper:
-                        # Logic for Bumper (Scroll) - Trigger on Press
-                        if event.value == 1:
-                            if now - last_press_time < DEBOUNCE_DELAY: continue
-                            last_press_time = now
-                            
-                            if ui.state == "SCANNING":
-                                ui.cancel_scan()
-                            else:
-                                ui.next()
-                    else:
-                        # Unknown button, log it or ignore
-                        pass
+                                    ui.next()
+                        else:
+                            # Unknown button, log it or ignore
+                            pass
+    finally:
+        ui.cleanup()
 
 if __name__ == "__main__":
     main()
