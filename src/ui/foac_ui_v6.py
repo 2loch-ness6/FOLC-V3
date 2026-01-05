@@ -288,7 +288,6 @@ def main():
     except: pass
 
     if not devices:
-        ui.cleanup()
         return
 
     # Input Loop
@@ -307,6 +306,7 @@ def main():
                 # 2. Thread completes during the select() timeout window
                 # Ensure UI state is consistent with thread lifecycle
                 ui.scanning_thread = None
+                ui.stop_scan = False  # Reset flag for future scans
                 ui.state = "MENU"
                 ui.status_msg = "SCAN DONE"
                 ui.draw()
