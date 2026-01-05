@@ -29,6 +29,7 @@ adb shell "chmod +x /data/rayhunter/start_foac_v2.sh"
 echo "[*] Pushing FOAC Python files..."
 adb push src/ui/foac_ui_v6.py /data/alpine/root/foac_ui_v6.py
 adb push src/core/foac_core.py /data/alpine/root/foac_core.py
+adb push src/core/input_manager.py /data/alpine/root/input_manager.py
 
 echo "[+] Updates pushed successfully."
 echo "[*] To apply changes, you may need to restart the services:"
