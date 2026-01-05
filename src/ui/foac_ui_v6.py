@@ -307,8 +307,13 @@ def main():
                 # Ensure UI state is consistent with thread lifecycle
                 ui.scanning_thread = None
                 ui.stop_scan = False  # Reset flag for future scans
-                ui.state = "MENU"
-                ui.status_msg = "SCAN DONE"
+                # Check if results were populated before transitioning state
+                if ui.results:
+                    ui.state = "RESULT"
+                    ui.status_msg = "SELECT TGT"
+                else:
+                    ui.state = "MENU"
+                    ui.status_msg = "SCAN DONE"
                 ui.draw()
 
             if not r: continue
