@@ -56,7 +56,7 @@ def main():
                         # Highlight specific known keys for the user
                         if event.type == evdev.ecodes.EV_KEY:
                             if event.code == 116: print(f"    -> POWER DETECTED ({event.value})")
-                            if event.code == 0x211: print(f"    -> BTN_211 DETECTED ({event.value})") # Common for WPS/Reset
+                            if event.code == evdev.ecodes.KEY_WPS_BUTTON: print(f"    -> WPS/RESET (KEY_WPS_BUTTON) DETECTED ({event.value})")  # Common WPS/Reset key
 
     except KeyboardInterrupt:
         print("\nStopping diagnostic.")
