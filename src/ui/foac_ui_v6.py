@@ -65,6 +65,7 @@ class UI:
         if self.scanning_thread and self.scanning_thread.is_alive():
             self.stop_scan = True
             self.scanning_thread.join(timeout=2.0)
+        self.scanning_thread = None
 
     def context_menu(self):
         # Triggered by Long Press Power
@@ -301,8 +302,10 @@ def main():
             
             # Check thread health - auto-transition if scan completed
             if ui.state == "SCANNING" and ui.scanning_thread and not ui.scanning_thread.is_alive():
-                # Thread finished but state wasn't updated (shouldn't happen normally)
-                # Ensure UI is consistent
+                # Thread finished but state wasn't updated. This can occur if:
+                # 1. Hardware scan completes but _scan_task crashes before updating state
+                # 2. Thread completes during the select() timeout window
+                # Ensure UI state is consistent with thread lifecycle
                 ui.scanning_thread = None
                 ui.state = "MENU"
                 ui.status_msg = "SCAN DONE"
