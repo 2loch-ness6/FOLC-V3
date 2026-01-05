@@ -103,10 +103,14 @@ class InputManager:
         # LOGIC: POWER BUTTON
         if is_power or event.code == KEY_POWER:
             if event.value == 1: # DOWN
-                # Prevent bounce: only update if not in debounce window
-                if not self.power_is_down or (now - self.power_down_time) > self.debounce_window:
+                # Prevent bounce: only record first DOWN or after debounce expires
+                if not self.power_is_down:
+                    # First press
                     self.power_down_time = now
                     self.power_is_down = True
+                elif (now - self.power_down_time) > self.debounce_window:
+                    # Debounce expired, treat as new press
+                    self.power_down_time = now
             elif event.value == 0: # UP
                 if not self.power_is_down: return # Glitch or startup state
                 self.power_is_down = False
