@@ -196,7 +196,7 @@ install: all
 	@echo ""
 	@echo "To use nosetuid.so with adbd:"
 	@echo "  cp /data/local/tmp/nosetuid.so /data/local/nosetuid.so"
-	@echo "  setprop wrap.adbd \"LD_PRELOAD=/data/local/tmp/nosetuid.so\""
+	@echo "  setprop wrap.adbd \"LD_PRELOAD=/data/local/nosetuid.so\""
 	@echo "  stop adbd && start adbd"
 	@echo "════════════════════════════════════════"
 

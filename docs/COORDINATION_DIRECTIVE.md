@@ -370,7 +370,7 @@ reboot
 |------|------------|
 | **Alpine Chroot** | Separate Linux environment at `/data/alpine` |
 | **Backdoor** | Netcat listener on port 9999 for shell access |
-| **FOLC** | "Flipper-Orbic Attack Console" - the custom UI |
+| **FOLC** | The custom FOLC user interface |
 | **Host** | The main Qualcomm Embedded Linux OS |
 | **Init Script** | Service management script (start/stop/restart) |
 | **Service Hijack** | Replacing vendor binary with wrapper script |

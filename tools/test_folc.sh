@@ -232,7 +232,7 @@ test_root_access() {
         # Test capabilities
         local caps=$(adb_shell "su -c 'cat /proc/self/status | grep CapEff'" 2>/dev/null | awk '{print $2}')
         log INFO "Root capabilities: $caps"
-        test_assert "Root has full capabilities" "[ -n '$caps' ]" \
+        test_assert "Root has full capabilities" "[ -n \"$caps\" ]" \
             "Could not read capabilities"
     else
         test_skip "Frontdoor root test" "su binary not found"
@@ -324,11 +324,11 @@ test_folc_ui() {
     
     # Test 4: Dependencies check
     local evdev_check=$(adb_root_shell "chroot /data/alpine python3 -c 'import evdev; print(\"OK\")' 2>/dev/null" | grep "OK")
-    test_assert "Python evdev module available" "[ -n '$evdev_check' ]" \
+    test_assert "Python evdev module available" "[ -n \"$evdev_check\" ]" \
         "evdev module not installed"
     
     local pil_check=$(adb_root_shell "chroot /data/alpine python3 -c 'import PIL; print(\"OK\")' 2>/dev/null" | grep "OK")
-    test_assert "Python PIL module available" "[ -n '$pil_check' ]" \
+    test_assert "Python PIL module available" "[ -n \"$pil_check\" ]" \
         "PIL module not installed"
 }
 

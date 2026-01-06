@@ -27,6 +27,14 @@ The frontdoor methods are considered more stable and reliable than the backdoor,
 #### Purpose
 A minimal SUID root binary that provides standard `su` functionality without requiring complex kernel modifications.
 
+**⚠️ Security Warning:** This implementation provides unrestricted root access to any process that can execute the binary. In a production or multi-user environment, this binary should be protected by additional access controls:
+- Restrict executable permissions to specific users/groups
+- Use SELinux policies to limit access
+- Consider implementing authentication mechanisms
+- Monitor and audit usage in production environments
+
+For the Orbic Speed device (single-user, researcher-controlled), this approach is acceptable as the device is dedicated to security research and penetration testing.
+
 #### Implementation
 ```c
 int main(int argc, char *argv[]) {
