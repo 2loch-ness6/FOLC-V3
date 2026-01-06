@@ -43,8 +43,8 @@ The device utilizes a hybrid filesystem structure typical of embedded Android/Li
 *   **Utilities**: `htop`, `tmux`, `neofetch`, `iw`, `wireless-tools`, `evdev` (Python bindings).
 
 ### Custom Logic
-*   **`foac_ui_v6.py`**: The primary interface. Directly addresses the Framebuffer (`/dev/fb0`) for graphics and reads `/dev/input/event*` for button control.
-*   **`foac_core.py`**: A Python wrapper for `iw`, `tcpdump`, and `aireplay-ng`, abstracting the shell commands into Python methods.
+*   **`folc_ui.py`**: The primary interface. Directly addresses the Framebuffer (`/dev/fb0`) for graphics and reads `/dev/input/event*` for button control.
+*   **`folc_core.py`**: A Python wrapper for `iw`, `tcpdump`, and `aireplay-ng`, abstracting the shell commands into Python methods.
 *   **`wrapper_v4.sh`**: The "Hypervisor" script that manages the environment setup (mounting `/proc`, `/sys`, `/dev` into chroot) and process lifecycle.
 
 ## 4. Measurable Outcomes
