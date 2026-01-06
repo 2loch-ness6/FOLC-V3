@@ -97,8 +97,9 @@ Orbic Speed (RC400L)
 ### Access Methods
 
 1. **Physical UI:** 128x128 screen + 2 buttons (standalone operation)
-2. **Backdoor Shell:** `adb forward tcp:9999 tcp:9999; nc 127.0.0.1 9999`
-3. **ADB:** Standard Android Debug Bridge over USB
+2. **Frontdoor (Primary):** `adb shell su` - Persistent SUID root binary
+3. **Backdoor (Fallback):** `adb forward tcp:9999 tcp:9999; nc 127.0.0.1 9999`
+4. **ADB Root:** Optional `nosetuid.so` for automatic root in all ADB shells
 
 ---
 
@@ -108,28 +109,36 @@ Orbic Speed (RC400L)
 FOLC-V3/
 ├── src/                 # Source code
 │   ├── ui/              # User interface implementations
-│   │   └── foac_ui_v6.py   # Current UI (framebuffer-based)
+│   │   └── folc_ui.py       # Current UI (framebuffer-based)
 │   └── core/            # Core functionality libraries
-│       └── foac_core.py    # Wireless tools wrapper
+│       ├── folc_core.py     # Wireless tools wrapper
+│       └── input_manager.py # Input device handler
 ├── exploits/            # Root exploit and persistence scripts
-│   ├── wrapper_v4.sh       # Active persistence exploit
-│   └── ...                 # Historical exploit versions
+│   ├── wrapper_v4.sh        # Active persistence exploit
+│   ├── orbital_os_init.sh   # System initialization
+│   └── ...                  # Historical exploit versions
 ├── tools/               # Utility scripts and helpers
-│   ├── setup.sh            # Master installation script
-│   ├── deploy_foac.sh      # Deploy UI to device
-│   ├── orbic_manager.py    # Deployment manager
-│   └── ...                 # Other utilities
+│   ├── setup.sh             # Master installation script
+│   ├── deploy_folc.sh       # Deploy UI to device
+│   ├── test_folc.sh         # Comprehensive test suite
+│   ├── orbic_manager.py     # Deployment manager
+│   └── ...                  # Other utilities
 ├── config/              # Configuration files
-│   ├── wifi_setup.conf     # WiFi client configuration
-│   └── tinyproxy.conf      # Proxy configuration
+│   ├── wifi_setup.conf      # WiFi client configuration
+│   └── tinyproxy.conf       # Proxy configuration
 ├── docs/                # Additional documentation
-│   ├── ROADMAP.md          # Future development plans
-│   ├── TROUBLESHOOTING.md  # Common issues and solutions
-│   ├── QUICK_REFERENCE.md  # Command quick reference
-│   ├── PROJECT_SUMMARY.md  # Detailed project analysis
-│   └── ...                 # Original research docs
+│   ├── ROADMAP.md           # Future development plans
+│   ├── TROUBLESHOOTING.md   # Common issues and solutions
+│   ├── QUICK_REFERENCE.md   # Command quick reference
+│   ├── PROJECT_SUMMARY.md   # Detailed project analysis
+│   ├── FRONTDOOR.md         # Frontdoor root implementation
+│   └── ...                  # Original research docs
 ├── archive/             # Deprecated/historical files
-│   └── README.md           # Archive explanation
+│   └── README.md            # Archive explanation
+├── ksu.c                # SUID root binary source
+├── nosetuid.c           # ADB root persistence library
+├── Makefile             # Build system for native binaries
+├── BUILD.md             # Build instructions
 ├── README.md            # This file
 ├── INSTALL.md           # Detailed installation guide
 ├── SECURITY.md          # Security policy and best practices
@@ -187,6 +196,29 @@ FOLC-V3/
 
 For detailed instructions, see [INSTALL.md](INSTALL.md)
 
+### Testing
+
+Run the comprehensive test suite to verify your installation:
+
+```bash
+# Run all tests
+./tools/test_folc.sh
+```
+
+This test suite:
+- ✅ Verifies device connectivity and root access
+- ✅ Tests Alpine Linux chroot functionality
+- ✅ Validates FOLC UI installation
+- ✅ Checks network capabilities
+- ✅ Tests both backdoor and frontdoor access methods
+- ✅ Generates detailed logs and reports
+
+The test script is designed to run on Android 14 devices within either:
+- **Termux** environment
+- **Kali Linux Chroot** on Android
+
+It uses the system ADB binary (`/bin/adb`) provided by Magisk for optimal stability.
+
 ---
 
 ## 💡 Usage
@@ -210,6 +242,19 @@ The device UI is controlled with two buttons:
 
 ### Command Line Access
 
+**Method 1: Frontdoor (Recommended)**
+```bash
+# Direct root access via su
+adb shell su -c "command"
+
+# Enter the Alpine chroot
+adb shell "su -c 'chroot /data/alpine /bin/bash'"
+
+# Interactive root shell
+adb shell su
+```
+
+**Method 2: Backdoor (Fallback)**
 ```bash
 # Forward the backdoor port
 adb forward tcp:9999 tcp:9999
@@ -225,6 +270,8 @@ tcpdump -i wlan0 -w capture.pcap
 nmap -sn 192.168.1.0/24
 airmon-ng start wlan0
 ```
+
+For more details on frontdoor implementation, see [docs/FRONTDOOR.md](docs/FRONTDOOR.md)
 
 ---
 
@@ -260,12 +307,13 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed feature plans.
 ## 📚 Documentation
 
 - **[INSTALL.md](INSTALL.md)** - Detailed installation guide
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Technical deep-dive
-- **[docs/EXPLOIT.md](docs/EXPLOIT.md)** - Root methodology explained
-- **[docs/HARDWARE.md](docs/HARDWARE.md)** - Device specifications and mods
-- **[docs/USAGE.md](docs/USAGE.md)** - Detailed usage examples
+- **[BUILD.md](BUILD.md)** - Building native binaries (ksu, nosetuid.so)
+- **[docs/FRONTDOOR.md](docs/FRONTDOOR.md)** - Frontdoor root implementation guide
+- **[docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** - Command quick reference
 - **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and fixes
 - **[docs/ROADMAP.md](docs/ROADMAP.md)** - Future development plans
+- **[docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)** - Project analysis
+- **[docs/ORBIC_SYSTEM_ANALYSIS.md](docs/ORBIC_SYSTEM_ANALYSIS.md)** - System internals
 
 ---
 
