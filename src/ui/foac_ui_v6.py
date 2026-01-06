@@ -4,6 +4,8 @@ import subprocess
 import threading
 import sys
 import os
+import signal
+from select import select
 from PIL import Image, ImageDraw, ImageFont
 
 # Import functional core
@@ -58,12 +60,19 @@ class UI:
         self.status_msg = "READY"
         self.scan_idx = 0
         self.scanning_thread = None
-        self.stop_scan = False
-        
-        # Init Input Manager
-        if INPUT:
-            INPUT.callback = self.handle_input
-            INPUT.start()
+        self.stop_scan_event = threading.Event()  # Thread-safe flag
+        self.state_lock = threading.Lock()  # Protects state transitions
+
+    def cleanup(self):
+        """Clean up resources, especially threads"""
+        if self.scanning_thread and self.scanning_thread.is_alive():
+            self.stop_scan_event.set()
+            self.scanning_thread.join(timeout=2.0)
+            # Check if thread actually terminated
+            if self.scanning_thread.is_alive():
+                # Thread didn't terminate - log to stderr
+                print("WARNING: Scanning thread did not terminate within timeout", file=sys.stderr)
+        self.scanning_thread = None
 
     def handle_input(self, event):
         """Callback for InputManager events"""
@@ -205,17 +214,19 @@ class UI:
             results = [("DEMO_NET", "00:11:22:33:44:55", "-50")]
         
         # Only update if not aborted
-        if not self.stop_scan:
-            self.results = results
-            self.scan_idx = 0
-            self.state = "RESULT"
-            self.status_msg = "SELECT TGT"
-            self.scanning_thread = None
+        if not self.stop_scan_event.is_set():
+            with self.state_lock:
+                self.results = results
+                self.scan_idx = 0
+                self.state = "RESULT"
+                self.status_msg = "SELECT TGT"
+                self.scanning_thread = None
             self.draw()
 
     def cancel_scan(self):
         if self.state == "SCANNING":
-            self.stop_scan = True
+            # Delegate thread cleanup to the shared cleanup routine
+            self.cleanup()
             self.state = "MENU"
             self.status_msg = "ABORTED"
             self.draw()
@@ -227,7 +238,7 @@ class UI:
             if item == "SCAN FREQUENCIES":
                 self.state = "SCANNING"
                 self.status_msg = "SCANNING"
-                self.stop_scan = False
+                self.stop_scan_event.clear()  # Reset event for new scan
                 self.draw()
                 # Start Thread
                 self.scanning_thread = threading.Thread(target=self._scan_task)
@@ -291,12 +302,97 @@ def main():
     ui = UI()
     ui.draw()
     
-    # Main thread just waits, InputManager handles events in background
+    # Signals are handled by default; cleanup is performed by the main loop's
+    # normal control flow and any associated finally blocks.
+    
+    # Auto-detect all input devices
+    devices = []
+    try:
+        for path in os.listdir("/dev/input"):
+            if path.startswith("event"):
+                try:
+                    dev = evdev.InputDevice(os.path.join("/dev/input", path))
+                    devices.append(dev)
+                except: pass
+    except: pass
+
+    if not devices:
+        return
+
+    # Input Loop
+    devices_map = {dev.fd: dev for dev in devices}
+    last_press_time = 0
+    power_down_time = 0
+    
     try:
         while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        if INPUT: INPUT.stop()
+            r, w, x = select(devices_map.values(), [], [], 0.5) # Timeout 0.5s to refresh
+            
+            # Check thread health - auto-transition if scan completed
+            if ui.state == "SCANNING" and ui.scanning_thread and not ui.scanning_thread.is_alive():
+                # Thread finished but state wasn't updated. This can occur if:
+                # 1. Hardware scan completes but _scan_task crashes before updating state
+                # 2. Thread completes during the select() timeout window
+                # Join the thread to ensure all state updates are complete
+                ui.scanning_thread.join(timeout=0.5)
+                # Use lock to safely check state after thread completion
+                with ui.state_lock:
+                    # Only transition if _scan_task didn't already update state
+                    if ui.state == "SCANNING":
+                        ui.scanning_thread = None
+                        ui.stop_scan_event.clear()  # Reset event for future scans
+                        # Check if results were populated before transitioning state
+                        if ui.results:
+                            ui.state = "RESULT"
+                            ui.status_msg = "SELECT TGT"
+                        else:
+                            ui.state = "MENU"
+                            ui.status_msg = "SCAN DONE"
+                        ui.draw()
+
+            if not r: continue
+
+            for dev in r:
+                dev_name = dev.name.lower()
+                is_power = "pon" in dev_name or "powerkey" in dev_name
+                is_bumper = "wps" in dev_name or "reset" in dev_name
+                
+                for event in dev.read():
+                    if event.type == evdev.ecodes.EV_KEY:
+                        now = time.time()
+                        
+                        if is_power:
+                            if event.value == 1: # Down
+                                power_down_time = now
+                            elif event.value == 0: # Up
+                                duration = now - power_down_time
+                                # Ignore extremely short glitches
+                                if duration < 0.05: continue
+                                
+                                if duration >= 0.8:
+                                    # LONG PRESS
+                                    ui.context_menu()
+                                else:
+                                    # SHORT CLICK
+                                    if ui.state == "SCANNING":
+                                        ui.cancel_scan()
+                                    else:
+                                        ui.select()
+                        elif is_bumper:
+                            # Logic for Bumper (Scroll) - Trigger on Press
+                            if event.value == 1:
+                                if now - last_press_time < DEBOUNCE_DELAY: continue
+                                last_press_time = now
+                                
+                                if ui.state == "SCANNING":
+                                    ui.cancel_scan()
+                                else:
+                                    ui.next()
+                        else:
+                            # Unknown button, log it or ignore
+                            pass
+    finally:
+        ui.cleanup()
 
 if __name__ == "__main__":
     main()
