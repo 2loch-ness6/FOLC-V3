@@ -175,7 +175,7 @@ nc 127.0.0.1 9999
 
 3. **Verify files exist:**
    ```bash
-   adb shell "ls -la /data/alpine/root/folc_ui_v6.py"
+   adb shell "ls -la /data/alpine/root/folc_ui.py"
    adb shell "ls -la /data/alpine/root/folc_core.py"
    ```
 
@@ -196,7 +196,7 @@ nc 127.0.0.1 9999
    nc 127.0.0.1 9999
    # In backdoor shell:
    cd /data/alpine/root
-   python3 folc_ui_v6.py &
+   python3 folc_ui.py &
    exit
    ```
 

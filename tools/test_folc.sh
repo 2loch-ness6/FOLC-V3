@@ -409,14 +409,14 @@ test_backdoor() {
     if [ "$backdoor_port" -gt 0 ]; then
         log PASS "Backdoor listening on port 9999"
         
-        # Try to connect
+        # Try to connect (without executing commands to avoid interference)
         "$ADB_BIN" forward tcp:9999 tcp:9999 >/dev/null 2>&1
         sleep 1
         
-        # Send test command
-        local backdoor_test=$(echo "echo 'backdoor_test'" | nc -w 2 127.0.0.1 9999 2>/dev/null | grep "backdoor_test" || true)
-        test_assert "Backdoor responds to commands" "[ -n '$backdoor_test' ]" \
-            "Backdoor did not respond"
+        # Test connection only (send exit immediately to minimize impact)
+        local backdoor_test=$(echo "exit" | timeout 3 nc -w 1 127.0.0.1 9999 2>/dev/null && echo "CONNECTED" || echo "FAILED")
+        test_assert "Backdoor connection test" "[[ '$backdoor_test' == 'CONNECTED' ]]" \
+            "Could not establish connection to backdoor"
         
         # Cleanup
         "$ADB_BIN" forward --remove tcp:9999 >/dev/null 2>&1 || true

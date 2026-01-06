@@ -241,8 +241,8 @@ class UI:
                 self.status_msg = "SCANNING"
                 self.stop_scan_event.clear()  # Reset event for new scan
                 self.draw()
-                # Start Thread
-                self.scanning_thread = threading.Thread(target=self._scan_task)
+                # Start Thread (daemon=True for clean exit)
+                self.scanning_thread = threading.Thread(target=self._scan_task, daemon=True)
                 self.scanning_thread.start()
             
             elif item == "PACKET HARVEST":
