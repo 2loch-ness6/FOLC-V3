@@ -1,4 +1,3 @@
-import evdev
 import struct
 import time
 import subprocess
@@ -12,9 +11,16 @@ from PIL import Image, ImageDraw, ImageFont
 # Import functional core
 try:
     import foac_core
+    from input_manager import InputManager
+    
     WIFI = foac_core.WirelessTool("wlan0")
-except ImportError:
+    CELL = foac_core.CellularTool("rmnet_data0")
+    INPUT = InputManager()
+except ImportError as e:
+    print(f"Import Error: {e}")
     WIFI = None
+    CELL = None
+    INPUT = None
 
 # --- CONFIG ---
 FB_PATH = "/dev/fb0"
@@ -29,10 +35,6 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 ORANGE = (255, 165, 0)
 GRAY = (50, 50, 50)
-
-# Input Config
-CODE_POWER = 116
-DEBOUNCE_DELAY = 0.3
 
 def draw_fb(image):
     pixels = image.load()
@@ -72,6 +74,28 @@ class UI:
                 print("WARNING: Scanning thread did not terminate within timeout", file=sys.stderr)
         self.scanning_thread = None
 
+    def handle_input(self, event):
+        """Callback for InputManager events"""
+        print(f"UI Received: {event.action} from {event.source}")
+        
+        if event.action == "SELECT":
+            if self.state == "SCANNING":
+                self.cancel_scan()
+            else:
+                self.select()
+                
+        elif event.action == "NEXT":
+            if self.state == "SCANNING":
+                self.cancel_scan()
+            else:
+                self.next()
+                
+        elif event.action == "CONTEXT":
+            self.context_menu()
+            
+        elif event.action == "BACK":
+            self.back()
+            
     def context_menu(self):
         # Triggered by Long Press Power
         if self.state == "RESULT" and self.results:
@@ -92,7 +116,7 @@ class UI:
         if self.state == "CONTEXT": header_color = CYAN
         
         draw.rectangle((0, 0, WIDTH, 18), fill=header_color)
-        draw.text((5, 4), "ORBITAL CANNON v2", fill=BLACK)
+        draw.text((5, 4), "ORBITAL CANNON v3", fill=BLACK)
         
         status_color = GREEN
         if "SCAN" in self.status_msg: status_color = CYAN
@@ -152,8 +176,15 @@ class UI:
         elif self.state == "CONTEXT":
             # Detail View
             if "SYS" in self.status_msg:
+                # Get Cell Info
+                cell_ip = "No Net"
+                if CELL:
+                    info = CELL.get_info()
+                    if info["ip"]:
+                        cell_ip = info["ip"]
+                
                 draw.text((5, 40), "SYSTEM INFO:", fill=WHITE)
-                draw.text((5, 55), "Orbic Speed 5G", fill=GRAY)
+                draw.text((5, 55), f"Cell IP: {cell_ip}", fill=GRAY)
                 draw.text((5, 70), "Rooted: YES", fill=GREEN)
                 draw.text((5, 85), "Hold PWR: Back", fill=ORANGE)
             elif "DETAILS" in self.status_msg and self.results:
