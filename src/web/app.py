@@ -1,7 +1,6 @@
 from flask import Flask, render_template, jsonify
 import subprocess
 import os
-import json
 
 app = Flask(__name__)
 
@@ -47,4 +46,5 @@ def api_logs():
 
 if __name__ == '__main__':
     # Running on 0.0.0.0 to be accessible externally
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    debug = str(os.getenv("FLASK_DEBUG", "0")).lower() in ("1", "true", "yes", "on")
+    app.run(host='0.0.0.0', port=8080, debug=debug)
