@@ -1,7 +1,7 @@
 #!/bin/sh
-# FOAC SERVICE SUPERVISOR
-LOG="/data/rayhunter/foac.log"
-STOP_FLAG="/data/rayhunter/STOP_FOAC"
+# FOLC SERVICE SUPERVISOR
+LOG="/data/rayhunter/folc.log"
+STOP_FLAG="/data/rayhunter/STOP_FOLC"
 
 # Setup Environment
 mount -t proc proc /data/alpine/proc 2>/dev/null
@@ -17,7 +17,7 @@ while true; do
     fi
     
     echo "Starting UI..." >> $LOG
-    chroot /data/alpine /usr/bin/python3 /root/foac_ui_v6.py >> $LOG 2>&1
+    chroot /data/alpine /usr/bin/python3 /root/folc_ui.py >> $LOG 2>&1
     
     RET=$?
     echo "UI exited with code $RET. Respawning in 2s..." >> $LOG
