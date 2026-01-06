@@ -37,7 +37,7 @@ def api_logs():
     try:
         if os.path.exists(STATUS_FILE):
             # Using tail to get last 50 lines
-            result = subprocess.check_output(['tail', '-n', '50', STATUS_FILE], shell=False)
+            result = subprocess.check_output(['tail', '-n', '50', STATUS_FILE])
             return jsonify({"logs": result.decode('utf-8')})
         else:
             return jsonify({"logs": "Log file not found."})
