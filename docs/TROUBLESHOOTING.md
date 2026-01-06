@@ -164,19 +164,19 @@ nc 127.0.0.1 9999
 
 1. **Check if UI process is running:**
    ```bash
-   adb shell "ps | grep foac_ui"
+   adb shell "ps | grep folc_ui"
    ```
 
 2. **Check logs:**
    ```bash
-   adb shell "cat /data/rayhunter/foac.log"
+   adb shell "cat /data/rayhunter/folc.log"
    # Look for error messages
    ```
 
 3. **Verify files exist:**
    ```bash
-   adb shell "ls -la /data/alpine/root/foac_ui_v6.py"
-   adb shell "ls -la /data/alpine/root/foac_core.py"
+   adb shell "ls -la /data/alpine/root/folc_ui.py"
+   adb shell "ls -la /data/alpine/root/folc_core.py"
    ```
 
 4. **Check framebuffer permissions:**
@@ -188,7 +188,7 @@ nc 127.0.0.1 9999
 5. **Manually restart UI:**
    ```bash
    # Kill current (if running)
-   adb shell "pkill -f foac_ui"
+   adb shell "pkill -f folc_ui"
    
    # Wait for supervisor to restart (if configured)
    # Or manually start:
@@ -196,7 +196,7 @@ nc 127.0.0.1 9999
    nc 127.0.0.1 9999
    # In backdoor shell:
    cd /data/alpine/root
-   python3 foac_ui_v6.py &
+   python3 folc_ui.py &
    exit
    ```
 
@@ -459,7 +459,7 @@ write: No space left on device
 3. **Clean logs:**
    ```bash
    adb shell "rm /data/*.log"
-   adb shell "echo '' > /data/rayhunter/foac.log"
+   adb shell "echo '' > /data/rayhunter/folc.log"
    ```
 
 4. **Clean Alpine cache:**

@@ -1,5 +1,5 @@
 #!/bin/bash
-# FOAC Deployment Script
+# FOLC Deployment Script
 # Pushes the latest UI and Logic to the Orbic Speed
 # Updated for new repository structure
 
@@ -19,13 +19,14 @@ fi
 
 # 1. UI Files (To Alpine Chroot)
 echo "[-] Pushing UI to Alpine /root/..."
-adb push "$PROJECT_ROOT/src/ui/foac_ui_v6.py" /data/alpine/root/
-adb push "$PROJECT_ROOT/src/core/foac_core.py" /data/alpine/root/
+adb push "$PROJECT_ROOT/src/ui/folc_ui.py" /data/alpine/root/
+adb push "$PROJECT_ROOT/src/core/folc_core.py" /data/alpine/root/
+adb push "$PROJECT_ROOT/src/core/input_manager.py" /data/alpine/root/
 
 # 2. Startup Script (To Rayhunter dir)
 echo "[-] Pushing Start Script..."
-adb push "$PROJECT_ROOT/tools/start_foac_v2.sh" /data/rayhunter/
-adb shell "chmod +x /data/rayhunter/start_foac_v2.sh"
+adb push "$PROJECT_ROOT/tools/start_folc_v2.sh" /data/rayhunter/
+adb shell "chmod +x /data/rayhunter/start_folc_v2.sh"
 
 # 3. Hijack Wrapper
 echo "[-] Pushing Wrapper..."

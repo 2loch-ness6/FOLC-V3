@@ -5,16 +5,17 @@ import threading
 import sys
 import os
 import signal
+import evdev
 from select import select
 from PIL import Image, ImageDraw, ImageFont
 
 # Import functional core
 try:
-    import foac_core
+    import folc_core
     from input_manager import InputManager
     
-    WIFI = foac_core.WirelessTool("wlan0")
-    CELL = foac_core.CellularTool("rmnet_data0")
+    WIFI = folc_core.WirelessTool("wlan0")
+    CELL = folc_core.CellularTool("rmnet_data0")
     INPUT = InputManager()
 except ImportError as e:
     print(f"Import Error: {e}")
@@ -116,7 +117,7 @@ class UI:
         if self.state == "CONTEXT": header_color = CYAN
         
         draw.rectangle((0, 0, WIDTH, 18), fill=header_color)
-        draw.text((5, 4), "ORBITAL CANNON v3", fill=BLACK)
+        draw.text((5, 4), "FOLC v3", fill=BLACK)
         
         status_color = GREEN
         if "SCAN" in self.status_msg: status_color = CYAN
@@ -240,8 +241,8 @@ class UI:
                 self.status_msg = "SCANNING"
                 self.stop_scan_event.clear()  # Reset event for new scan
                 self.draw()
-                # Start Thread
-                self.scanning_thread = threading.Thread(target=self._scan_task)
+                # Start Thread (daemon=True for clean exit)
+                self.scanning_thread = threading.Thread(target=self._scan_task, daemon=True)
                 self.scanning_thread.start()
             
             elif item == "PACKET HARVEST":
@@ -320,6 +321,7 @@ def main():
         return
 
     # Input Loop
+    DEBOUNCE_DELAY = 0.05
     devices_map = {dev.fd: dev for dev in devices}
     last_press_time = 0
     power_down_time = 0

@@ -53,7 +53,7 @@ chroot /data/alpine /bin/bash
 iw wlan0 scan | grep SSID
 
 # Using Python tool
-python3 -c "from foac_core import WirelessTool; w=WirelessTool(); print(w.scan_networks())"
+python3 -c "from folc_core import WirelessTool; w=WirelessTool(); print(w.scan_networks())"
 ```
 
 ### Enable Monitor Mode
@@ -97,7 +97,7 @@ df -h /data
 ### View Logs
 ```bash
 # UI logs
-cat /data/rayhunter/foac.log
+cat /data/rayhunter/folc.log
 
 # System logs
 dmesg | tail -50
@@ -106,7 +106,7 @@ dmesg | tail -50
 ### Restart UI
 ```bash
 # Kill current UI
-pkill -f foac_ui_v6
+pkill -f folc_ui
 
 # It will auto-restart via supervisor
 ```
@@ -221,13 +221,13 @@ echo "[base64_string]" | base64 -d > file.txt
 ### UI Not Showing
 ```bash
 # Check if process running
-adb shell "ps | grep foac_ui"
+adb shell "ps | grep folc_ui"
 
 # Check logs
-adb shell "cat /data/rayhunter/foac.log"
+adb shell "cat /data/rayhunter/folc.log"
 
 # Manually restart
-adb shell "pkill -f foac_ui"
+adb shell "pkill -f folc_ui"
 ```
 
 ### Backdoor Not Accessible
@@ -295,7 +295,7 @@ adb forward tcp:9999 tcp:9999
 nc 127.0.0.1 9999
 
 # Stop services
-pkill -f foac_ui
+pkill -f folc_ui
 pkill nc
 
 # Remove Alpine

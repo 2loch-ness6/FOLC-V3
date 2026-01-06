@@ -229,7 +229,7 @@ Install the custom framebuffer interface:
 ```
 
 This will:
-1. Copy `foac_ui_v6.py` and `foac_core.py` to device
+1. Copy `folc_ui.py` and `folc_core.py` to device
 2. Install Python dependencies (`evdev`, `Pillow`)
 3. Configure the service supervisor
 4. Start the UI
@@ -321,12 +321,12 @@ adb shell "rm -rf /data/lost+found/*"
 **Solutions:**
 1. Check if service is running:
    ```bash
-   adb shell "ps | grep foac_ui"
+   adb shell "ps | grep folc_ui"
    ```
 
 2. Check logs:
    ```bash
-   adb shell "cat /data/rayhunter/foac.log"
+   adb shell "cat /data/rayhunter/folc.log"
    ```
 
 3. Manually restart:

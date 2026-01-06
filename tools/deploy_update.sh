@@ -20,15 +20,15 @@ echo "[*] Pushing symlink_bridge.sh..."
 adb push tools/symlink_bridge.sh /data/rayhunter/symlink_bridge.sh
 adb shell "chmod +x /data/rayhunter/symlink_bridge.sh"
 
-# 3. Push start_foac_v2.sh
-echo "[*] Pushing start_foac_v2.sh..."
-adb push tools/start_foac_v2.sh /data/rayhunter/start_foac_v2.sh
-adb shell "chmod +x /data/rayhunter/start_foac_v2.sh"
+# 3. Push start_folc_v2.sh
+echo "[*] Pushing start_folc_v2.sh..."
+adb push tools/start_folc_v2.sh /data/rayhunter/start_folc_v2.sh
+adb shell "chmod +x /data/rayhunter/start_folc_v2.sh"
 
 # 4. Push Python Core & UI
-echo "[*] Pushing FOAC Python files..."
-adb push src/ui/foac_ui_v6.py /data/alpine/root/foac_ui_v6.py
-adb push src/core/foac_core.py /data/alpine/root/foac_core.py
+echo "[*] Pushing FOLC Python files..."
+adb push src/ui/folc_ui.py /data/alpine/root/folc_ui.py
+adb push src/core/folc_core.py /data/alpine/root/folc_core.py
 adb push src/core/input_manager.py /data/alpine/root/input_manager.py
 
 echo "[+] Updates pushed successfully."

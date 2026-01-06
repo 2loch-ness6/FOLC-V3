@@ -87,7 +87,7 @@ System Init → /etc/init.d/orbital_os (new service)
               ↓
               Starts backdoor service
               ↓
-              Launches FOAC UI
+              Launches FOLC UI
               ↓
               System remains stable
 ```
@@ -195,7 +195,7 @@ Since `/etc/init.d/` is on a read-only filesystem, we have two options:
 - [ ] Init script follows standard init.d patterns
 - [ ] All mounts handled cleanly with error checking
 - [ ] Backdoor service starts reliably
-- [ ] FOAC UI optional and non-blocking
+- [ ] FOLC UI optional and non-blocking
 - [ ] Symlink bridge creates needed connections
 - [ ] System remains stable after deployment
 - [ ] Rollback procedure documented and tested
@@ -251,7 +251,7 @@ cp /data/rayhunter/orbital_os_init.sh /data/rayhunter/rayhunter-daemon
 **Step 4: Operator Verifies**
 ```bash
 VERIFY: Check backdoor accessibility
-VERIFY: Test FOAC UI functionality
+VERIFY: Test FOLC UI functionality
 VERIFY: Verify Alpine chroot mounts
 VERIFY: Test symlink bridge functionality
 ```
@@ -294,7 +294,7 @@ After deployment, Operator must verify:
 - [ ] No broken symlinks
 - [ ] PATH includes `/host-bin`
 
-### FOAC UI (Optional)
+### FOLC UI (Optional)
 - [ ] UI launches without errors
 - [ ] Display shows correct information
 - [ ] Buttons are responsive
@@ -370,7 +370,7 @@ reboot
 |------|------------|
 | **Alpine Chroot** | Separate Linux environment at `/data/alpine` |
 | **Backdoor** | Netcat listener on port 9999 for shell access |
-| **FOAC** | "Flipper-Orbic Attack Console" - the custom UI |
+| **FOLC** | The custom FOLC user interface |
 | **Host** | The main Qualcomm Embedded Linux OS |
 | **Init Script** | Service management script (start/stop/restart) |
 | **Service Hijack** | Replacing vendor binary with wrapper script |

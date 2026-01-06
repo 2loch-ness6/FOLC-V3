@@ -235,10 +235,10 @@ fi
 
 if [ "$DO_UI" = true ]; then
     print_step "Installing UI"
-    if [ -f "$SCRIPT_DIR/deploy_foac.sh" ]; then
-        bash "$SCRIPT_DIR/deploy_foac.sh"
+    if [ -f "$SCRIPT_DIR/deploy_folc.sh" ]; then
+        bash "$SCRIPT_DIR/deploy_folc.sh"
     else
-        echo -e "${YELLOW}⚠ deploy_foac.sh not found${NC}"
+        echo -e "${YELLOW}⚠ deploy_folc.sh not found${NC}"
     fi
 fi
 

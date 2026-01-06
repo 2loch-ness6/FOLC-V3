@@ -15,9 +15,10 @@ VERBOSE = True
 # Map local files to device paths
 # Note: Local paths are relative to repository root
 LOCAL_FILES = {
-    "src/ui/foac_ui_v6.py": "/data/alpine/root/foac_ui_v6.py",
-    "src/core/foac_core.py": "/data/alpine/root/foac_core.py",
-    "tools/start_foac_v2.sh": "/data/rayhunter/start_foac_v2.sh"
+    "src/ui/folc_ui.py": "/data/alpine/root/folc_ui.py",
+    "src/core/folc_core.py": "/data/alpine/root/folc_core.py",
+    "src/core/input_manager.py": "/data/alpine/root/input_manager.py",
+    "tools/start_folc_v2.sh": "/data/rayhunter/start_folc_v2.sh"
 }
 
 def log(msg, level="INFO"):

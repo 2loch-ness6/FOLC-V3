@@ -1,9 +1,9 @@
 #!/bin/sh
-# Start Friendly Orbital Assault Cannon UI
+# Start FOLC UI
 # Called by wrapper_v4.sh or init
 
-LOG="/data/rayhunter/foac.log"
-echo "--- FOAC Boot Start: $(date) ---" >> $LOG
+LOG="/data/rayhunter/folc.log"
+echo "--- FOLC Boot Start: $(date) ---" >> $LOG
 
 # 1. Ensure mounts exist
 mount -t proc proc /data/alpine/proc 2>/dev/null
@@ -30,6 +30,6 @@ if [ -f "$WLAN_DRIVER_PATH" ]; then
 fi
 
 # 3. Launch UI (Background)
-chroot /data/alpine /usr/bin/python3 /root/foac_ui.py >> $LOG 2>&1 &
-echo "FOAC UI Launched PID: $! at $(date)" >> $LOG
-echo "--- FOAC Boot End ---" >> $LOG
+chroot /data/alpine /usr/bin/python3 /root/folc_ui.py >> $LOG 2>&1 &
+echo "FOLC UI Launched PID: $! at $(date)" >> $LOG
+echo "--- FOLC Boot End ---" >> $LOG
