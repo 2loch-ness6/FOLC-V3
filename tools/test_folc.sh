@@ -11,7 +11,8 @@
 # Date: January 2026
 ################################################################################
 
-set -e  # Exit on error
+# Note: We don't use 'set -e' here because test failures should not abort the suite
+# Instead, we track pass/fail for each test explicitly
 
 # Colors for output
 RED='\033[0;31m'
@@ -507,23 +508,29 @@ test_integration() {
     
     # Test 1: Full stack test - scan WiFi via UI core
     log INFO "Testing WiFi scan functionality..."
-    local scan_test=$(adb_root_shell "chroot /data/alpine python3 -c '
-import sys
-sys.path.insert(0, \"/root\")
-try:
-    import folc_core
-    wifi = folc_core.WirelessTool(\"wlan0\")
-    results = wifi.scan_networks()
-    print(f\"SCAN_OK:{len(results)}\")
-except Exception as e:
-    print(f\"SCAN_ERROR:{e}\")
-' 2>&1")
     
-    if echo "$scan_test" | grep -q "SCAN_OK"; then
-        local count=$(echo "$scan_test" | grep -o "SCAN_OK:[0-9]*" | cut -d: -f2)
-        log PASS "WiFi scan test passed (found $count networks)"
+    # Get script directory
+    local script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    local test_script="$script_dir/test_wifi_scan.py"
+    
+    if [ -f "$test_script" ]; then
+        # Push test script to device
+        "$ADB_BIN" push "$test_script" /data/local/tmp/test_wifi_scan.py >/dev/null 2>&1
+        
+        # Run test
+        local scan_test=$(adb_root_shell "chroot /data/alpine python3 /data/local/tmp/test_wifi_scan.py" 2>&1)
+        
+        if echo "$scan_test" | grep -q "SCAN_OK"; then
+            local count=$(echo "$scan_test" | grep -o "SCAN_OK:[0-9]*" | cut -d: -f2)
+            log PASS "WiFi scan test passed (found $count networks)"
+        else
+            log WARN "WiFi scan test had issues: $scan_test"
+        fi
+        
+        # Cleanup
+        "$ADB_BIN" shell "rm -f /data/local/tmp/test_wifi_scan.py" >/dev/null 2>&1
     else
-        log WARN "WiFi scan test had issues: $scan_test"
+        test_skip "WiFi scan test" "test_wifi_scan.py not found"
     fi
 }
 
