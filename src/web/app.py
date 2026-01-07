@@ -1,50 +1,61 @@
-from flask import Flask, render_template, jsonify
+import http.server
+import socketserver
 import subprocess
+import json
 import os
 
-app = Flask(__name__)
+PORT = 8000
+WEB_ROOT = "/root/src/web/templates"
 
-# Configuration
-STATUS_FILE = "/data/rayhunter/orbital_os.log"
-
-def get_system_status():
-    """
-    Mock status for now. In production, this would parse logs 
-    or check process status.
-    """
-    status = {
-        "cpu_temp": "45°C",
-        "memory_usage": "128MB / 512MB",
-        "disk_usage": "45%",
-        "wifi_mode": "Managed",
-        "ip_address": "192.168.1.10" # Placeholder
-    }
-    return status
-
-@app.route('/')
-def index():
-    return render_template('index.html', status=get_system_status())
-
-@app.route('/api/status')
-def api_status():
-    return jsonify(get_system_status())
-
-@app.route('/api/logs')
-def api_logs():
-    """
-    Returns the last 50 lines of the system log.
-    """
-    try:
-        if os.path.exists(STATUS_FILE):
-            # Using tail to get last 50 lines
-            result = subprocess.check_output(['tail', '-n', '50', STATUS_FILE])
-            return jsonify({"logs": result.decode('utf-8')})
+class FolcHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/':
+            self.path = '/index.html'
+            return self.serve_template()
+        
+        elif self.path == '/api/status':
+            self.send_json({
+                "uptime": subprocess.getoutput("uptime"),
+                "ram": subprocess.getoutput("free -m | grep Mem")
+            })
+            
+        elif self.path == '/api/logs':
+            logs = subprocess.getoutput("tail -n 50 /data/rayhunter/folc.log")
+            self.send_json({"logs": logs})
+            
         else:
-            return jsonify({"logs": "Log file not found."})
-    except Exception as e:
-        return jsonify({"error": str(e)})
+            # Serve static files or 404
+            super().do_GET()
 
-if __name__ == '__main__':
-    # Running on 0.0.0.0 to be accessible externally
-    debug = str(os.getenv("FLASK_DEBUG", "0")).lower() in ("1", "true", "yes", "on")
-    app.run(host='0.0.0.0', port=8080, debug=debug)
+    def do_POST(self):
+        if self.path == '/api/scan':
+            # In a real scenario, this would trigger the UI process via IPC
+            # For now, we'll just log it
+            print("Scan triggered via Web UI")
+            self.send_json({"status": "SCAN_INITIATED"})
+        else:
+            self.send_error(404)
+
+    def serve_template(self):
+        try:
+            with open(os.path.join(WEB_ROOT, "index.html"), 'rb') as f:
+                content = f.read()
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(content)
+        except Exception as e:
+            self.send_error(500, str(e))
+
+    def send_json(self, data):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(data).encode())
+
+# Ensure we map / to our template directory for SimpleHTTPRequestHandler
+os.chdir(WEB_ROOT)
+
+with socketserver.TCPServer(("0.0.0.0", PORT), FolcHandler) as httpd:
+    print(f"SERVING AT PORT {PORT}")
+    httpd.serve_forever()
