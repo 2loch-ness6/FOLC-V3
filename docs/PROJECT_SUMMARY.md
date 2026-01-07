@@ -11,19 +11,19 @@ This document provides a comprehensive analysis of FOLC-V3, its current capabili
 FOLC-V3 successfully transforms a commercial off-the-shelf (COTS) 5G hotspot into a fully-functional embedded Linux security research platform. This is significant because:
 
 1. **Accessibility:** Uses inexpensive, readily available hardware (~$50-100)
-2. **Capability:** Provides root access with full system control
+2. **Capability:** Provides root access with full system control (UID 0 + Full Caps)
 3. **Portability:** Battery-powered, pocket-sized, inconspicuous
-4. **Versatility:** Can run standard Linux security tools
+4. **Versatility:** Can run standard Linux security tools (Nmap, Aircrack-ng)
 5. **Innovation:** Custom UI makes it usable without external computer
 
 ### Technical Achievement
 
 The project demonstrates:
-- **Privilege Escalation:** Exploiting service initialization for persistent root
-- **System Modification:** Running custom OS alongside vendor firmware
-- **Hardware Integration:** Direct framebuffer and input device control
-- **Network Manipulation:** WiFi monitor mode and packet injection
-- **Automation:** Scripted deployment and management
+- **Privilege Escalation:** Exploiting service initialization for persistent root via `rayhunter-daemon` hijack.
+- **System Modification:** Running custom Alpine Linux OS alongside vendor firmware.
+- **Hardware Integration:** Direct framebuffer and input device control for a custom UI.
+- **Network Manipulation:** WiFi monitor mode, packet injection, and MAC randomization.
+- **Automation:** Scripted deployment and management via `orbital_os_init.sh`.
 
 ---
 
@@ -133,9 +133,9 @@ The project demonstrates:
 | Monitor Mode | ✅ Working | Passive monitoring |
 | Packet Injection | ✅ Working | Active testing |
 | Deauth Attacks | ✅ Working | Availability testing |
-| Custom UI | ✅ Working | Standalone operation |
+| Custom UI | ✅ Working (v10) | Standalone operation |
 | Remote Access | ✅ Working | Advanced control |
-| Tool Integration | ✅ Working | Full security suite |
+| Tool Integration | ✅ Working | Nmap, Aircrack, MacChanger |
 | GPS Tracking | 🔄 Planned | War-walking |
 | Web Dashboard | 🔄 Planned | Remote management |
 | USB Ethernet | 🔄 Planned | Easy connection |
@@ -329,10 +329,10 @@ The project demonstrates:
 
 | Component | Maturity | Notes |
 |-----------|----------|-------|
-| Exploit Chain | Stable | Well-tested, reliable |
+| Exploit Chain | Stable | Well-tested, reliable, Persistent |
 | Alpine Chroot | Stable | Functional package system |
-| Physical UI | Beta | Working but improvable |
-| Tool Integration | Beta | Core tools working |
+| Physical UI | Stable | v10 UI with strict state management |
+| Tool Integration | Stable | Nmap, Aircrack, MacChanger integrated |
 | Documentation | Good | Comprehensive coverage |
 | Community | Early | Just getting started |
 | Web UI | Planned | Not yet implemented |
@@ -341,9 +341,9 @@ The project demonstrates:
 ### Stability Rating
 
 - **Exploit:** 9/10 - Reliable and persistent
-- **System:** 8/10 - Stable with occasional quirks
-- **UI:** 7/10 - Functional but needs polish
-- **Tools:** 8/10 - Most tools work well
+- **System:** 9/10 - Stable with native integration
+- **UI:** 8/10 - Functional, responsive, state-aware
+- **Tools:** 8/10 - Core tools work well
 - **Documentation:** 9/10 - Very comprehensive
 
 ### Risk Assessment
