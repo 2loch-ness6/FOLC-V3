@@ -27,6 +27,12 @@ The device was rooted using a multi-stage attack:
 
 **Note on Wireless Attacks:** The Unisoc hardware revision of the RC400L does not support Monitor Mode or Packet Injection via standard drivers. Automated deauth attacks are currently unsupported.
 
+**Exploit Exception (Jamming):**
+While smart injection is impossible, the device contains a proprietary engineering tool, **\`/usr/bin/iwnpi\`**, capable of raw RF transmission ("Continuous TX").
+*   **Capability:** Broad spectrum denial-of-service (Jamming).
+*   **Command:** \`iwnpi wlan0 set_channel <CH> <CH>; iwnpi wlan0 tx_start\`
+*   **Warning:** This is a "noisy" attack that disrupts all communications on the channel.
+
 ## 4. Key Files & Scripts
 
 | File | Purpose |
