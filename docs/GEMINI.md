@@ -10,12 +10,12 @@ This directory contains research, exploit scripts, and toolkits for modifying th
 
 ## 2. Device Hardware & OS
 *   **Model:** Orbic Speed (RC400L) / "Orbic Speed 4G/5G"
-*   **Chipset:** Qualcomm MDM9207 (ARMv7)
+*   **Chipset:** Unisoc (Spreadtrum) - RC400L Revision
 *   **Kernel:** Linux 3.18.48 (Preempt, built Nov 2020)
 *   **Firmware:** `ORB400L_V1.3.0_BVZRT_R220518`
-*   **Modem:** Qualcomm Snapdragon X12 LTE (Integrated) / 5G
+*   **Modem:** Unisoc Integrated.
 *   **Interfaces:**
-    *   `wlan0`: WiFi (Atheros/Qualcomm) - Capable of Monitor Mode/Injection.
+    *   `wlan0`: WiFi (Unisoc `sprdwl_ng`) - **NO MONITOR MODE SUPPORT**.
     *   `rmnet0`: Raw Cellular Data Interface.
 
 ## 3. Exploit Methodology
@@ -24,6 +24,8 @@ The device was rooted using a multi-stage attack:
 2.  **Privilege Escalation:** Identified that the `rayhunter-daemon` (an IMSI-catcher detector installed on the device) runs with **Full Capabilities**.
 3.  **Persistence (The Hijack):** The original `rayhunter-daemon` binary in `/data/rayhunter/` was replaced with a shell script wrapper (`wrapper_v4.sh`).
 4.  **Native Root (LD_PRELOAD):** Modified `/etc/init.d/adbd` to preload `/data/local/nosetuid.so`, effectively neutralizing privilege dropping in the ADB Daemon.
+
+**Note on Wireless Attacks:** The Unisoc hardware revision of the RC400L does not support Monitor Mode or Packet Injection via standard drivers. Automated deauth attacks are currently unsupported.
 
 ## 4. Key Files & Scripts
 
@@ -92,3 +94,10 @@ adb reboot
 **Result:** `adb shell` now grants immediate `uid=0(root)` access.
 **Limitations:** Capabilities are still bounded (`0xc0`) likely due to raw syscall usage or complex capability dropping sequences in `adbd`. Full system control (mount/chroot) still requires the Backdoor (Port 9999).
 **Persistence:** Persistent modification to `/etc/init.d/adbd`.
+
+## 9. Phase 3 Update: Wireless Attack Capabilities
+**Test Date:** Jan 7, 2026
+**Objective:** Validate 2.4/5GHz Deauth Attack
+**Result:** **FAILED**
+**Reason:** The Unisoc `sprdwl_ng` driver does not support standard Monitor Mode interfaces or packet injection via `iw`, `airmon-ng`, or `tcpdump`. 
+**Mitigation:** Wireless attacks are not possible on this device without a custom driver.
