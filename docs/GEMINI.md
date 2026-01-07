@@ -6,7 +6,7 @@ This directory contains research, exploit scripts, and toolkits for modifying th
 **Current Status:** **FULLY ROOTED & OPERATIONAL**
 *   **Root Level:** Unrestricted (UID 0 + Full Capability Set `0000003fffffffff`).
 *   **Environment:** Hybrid (Qualcomm Embedded Linux Host + Alpine Linux 3.17 Chroot).
-*   **Control:** Remote ADB/Shell via Port 9999 Backdoor.
+*   **Control:** Remote ADB/Shell via Port 9999 Backdoor + **Native Root (Frontdoor)**.
 
 ## 2. Device Hardware & OS
 *   **Model:** Orbic Speed (RC400L) / "Orbic Speed 4G/5G"
@@ -23,7 +23,7 @@ The device was rooted using a multi-stage attack:
 1.  **Initial Access:** Discovery of a suid binary `/bin/rootshell` which granted `uid=0` but with restricted capabilities (no mounting, no chroot).
 2.  **Privilege Escalation:** Identified that the `rayhunter-daemon` (an IMSI-catcher detector installed on the device) runs with **Full Capabilities**.
 3.  **Persistence (The Hijack):** The original `rayhunter-daemon` binary in `/data/rayhunter/` was replaced with a shell script wrapper (`wrapper_v4.sh`).
-4.  **Execution:** On boot, the system `init` launches our wrapper with full privileges. The wrapper mounts a custom Alpine Linux chroot and spawns a root shell backdoor on port 9999.
+4.  **Native Root (LD_PRELOAD):** Modified `/etc/init.d/adbd` to preload `/data/local/nosetuid.so`, effectively neutralizing privilege dropping in the ADB Daemon.
 
 ## 4. Key Files & Scripts
 
@@ -31,6 +31,7 @@ The device was rooted using a multi-stage attack:
 | :--- | :--- |
 | `orbic_research.md` | Initial findings and hardware research notes. |
 | `wrapper_v4.sh` | **CRITICAL.** The active persistent exploit. Replaces `rayhunter-daemon`. Mounts filesystems and spawns the backdoor. |
+| `nosetuid.c` | Source for the LD_PRELOAD library that prevents `adbd` from dropping root. |
 | `enter_alpine.sh` | Script to mount `/proc`, `/sys`, `/dev` and chroot into Alpine manually. |
 | `apk_install.sh` | Helper to run `apk` commands via the hijacked service (Deprecated by direct backdoor access). |
 | `install_toolkit.sh` | Script that installed the security tools via the backdoor. |
@@ -51,8 +52,9 @@ The device was rooted using a multi-stage attack:
 *   **Routing:** Custom routing rules added to allow internet access from the Chroot.
 
 ### Access Mechanism
-A persistent **Netcat Listener** runs on **Port 9999** on `localhost`.
-*   **To Connect:** `adb forward tcp:9999 tcp:9999` then `nc 127.0.0.1 9999`.
+1.  **Native Frontdoor:** `adb shell` (Grants UID 0, but restricted capabilities).
+2.  **Backdoor:** Netcat Listener on **Port 9999** (Grants Full Capabilities).
+    *   **To Connect:** `adb forward tcp:9999 tcp:9999` then `nc 127.0.0.1 9999`.
 
 ## 6. Installed Security Toolkit
 The Alpine Chroot is equipped with the following tools:
@@ -81,3 +83,12 @@ adb shell "chmod +x /etc/init.d/start_qt_daemon /etc/init.d/start_QCMAP_Connecti
 adb reboot
 ```
 *Note: The root hijack will persist even after restoring vendor functionality.*
+
+## 8. Phase 3 Update: Native Root via LD_PRELOAD
+**Status:** SUCCESS (UID 0 Integration)
+**Method:** 
+1. Compiled `nosetuid.so` (intercepts `setuid`, `capset`, `prctl`) for ARMv7 SoftFP.
+2. Injected `export LD_PRELOAD=/data/local/nosetuid.so` into `/etc/init.d/adbd`.
+**Result:** `adb shell` now grants immediate `uid=0(root)` access.
+**Limitations:** Capabilities are still bounded (`0xc0`) likely due to raw syscall usage or complex capability dropping sequences in `adbd`. Full system control (mount/chroot) still requires the Backdoor (Port 9999).
+**Persistence:** Persistent modification to `/etc/init.d/adbd`.
