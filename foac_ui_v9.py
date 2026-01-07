@@ -21,6 +21,13 @@ except ImportError:
                 return [("MOCK_NET", "00:11:22:33:44:55", "-50")]
             def deauth(self, *args, **kwargs):
                 pass
+        class NmapTool:
+            def quick_scan(self):
+                return ["192.168.1.1", "192.168.1.50"]
+        class MacChangerTool:
+            def random_mac(self): return True
+            def reset_mac(self): return True
+            
     folc_core = MockCore()
 
 # --- CONSTANTS ---
@@ -127,14 +134,15 @@ class App:
     def init_ui(self):
         self.main_menu = [
             ("WIFI SCAN", self.ui_scan),
-            ("SNIFFER", self.ui_sniffer),
+            ("NMAP SCAN", self.ui_nmap),
             ("DEAUTH ATTACK", self.ui_deauth),
             ("IP INFO", self.ui_ip),
             ("REBOOT", lambda: os.system("reboot")),
             ("STOCK UI", self.ui_stock)
         ]
         self.shift_menu = [
-            ("SETTINGS", None),
+            ("RANDOM MAC", self.ui_mac_rand),
+            ("RESET MAC", self.ui_mac_reset),
             ("ABOUT", lambda: self.alert("FOAC v10\nBy Gemini")),
             ("EXIT UI", lambda: sys.exit(0))
         ]
@@ -168,6 +176,32 @@ class App:
             lines.append(f"{sig} {ssid[:9]}")
         self.alert('\n'.join(lines))
 
+    def ui_nmap(self):
+        self.show_busy("NMAP SCAN...")
+        try:
+            hosts = folc_core.NmapTool().quick_scan()
+            if not hosts:
+                self.alert("NO HOSTS\nFOUND")
+            else:
+                lines = ["HOSTS:"] + hosts[:4]
+                self.alert('\n'.join(lines))
+        except Exception as e:
+             self.alert(f"ERROR:\n{str(e)[:15]}")
+
+    def ui_mac_rand(self):
+        self.show_busy("RANDOMIZING...")
+        if folc_core.MacChangerTool().random_mac():
+            self.alert("MAC CHANGED\nSUCCESS")
+        else:
+            self.alert("MAC CHANGE\nFAILED")
+
+    def ui_mac_reset(self):
+        self.show_busy("RESETTING...")
+        if folc_core.MacChangerTool().reset_mac():
+            self.alert("MAC RESET\nSUCCESS")
+        else:
+            self.alert("RESET\nFAILED")
+
     def ui_sniffer(self):
         self.alert("SNIFFER START\n(MOCK)")
 
@@ -180,8 +214,6 @@ class App:
 
         target_ssid, target_bssid, sig = nets[0]
         
-        # Confirmation Screen (Mini-blocking loop for simplicity)
-        # In a full event-loop rewrite, this would be a CONFIRM state
         self.disp.clear()
         self.disp.draw.text((5, 10), "TARGET ACQUIRED", RED)
         self.disp.draw.text((5, 30), f"SSID: {target_ssid[:10]}", WHITE)
@@ -218,11 +250,18 @@ class App:
             for line in self.popup_lines:
                 self.disp.draw.text((10, y), line, WHITE)
                 y += 15
-            self.disp.draw.text((80, 95), "[OK]", GREEN) # Indicator to press WPS
+            self.disp.draw.text((80, 95), "[OK]", GREEN) 
             
         elif self.state == "MENU":
             # Draw Menu
             menu = self.shift_menu if self.is_shift else self.main_menu
+            
+            # Bounds check
+            if self.selected_idx >= len(menu):
+                self.selected_idx = len(menu) - 1
+            if self.selected_idx < 0:
+                self.selected_idx = 0
+            
             title = "ORBITAL [S]" if self.is_shift else "ORBITAL CANNON"
             header_bg = BLUE if self.is_shift else RED
             
@@ -270,7 +309,6 @@ class App:
             needs_redraw = False
             
             # 2. Shift Mode Hold Logic
-            # Check if WPS is held > 1s to trigger Shift
             if wps_down > 0 and (current_time - wps_down > 1.0) and not self.is_shift and self.state == "MENU":
                 self.is_shift = True
                 needs_redraw = True
@@ -289,7 +327,6 @@ class App:
                                 if ev.value == 1: # DOWN
                                     pwr_down = current_time
                                 elif ev.value == 0: # UP
-                                    # Strict Rule: Power button ignored in POPUP state
                                     if self.state == "POPUP":
                                         continue 
                                         
@@ -299,25 +336,24 @@ class App:
                                             needs_redraw = True
                                         else: # SHORT PRESS (Select)
                                             menu = self.shift_menu if self.is_shift else self.main_menu
-                                            action = menu[self.selected_idx][1]
-                                            if action: 
-                                                action() # Executes and might change state
-                                                needs_redraw = True
+                                            # Safe execution with bounds check
+                                            if 0 <= self.selected_idx < len(menu):
+                                                action = menu[self.selected_idx][1]
+                                                if action: 
+                                                    action()
+                                                    needs_redraw = True
 
                             # --- WPS BUTTON (Menu / Shift) ---
                             elif is_wps:
                                 if ev.value == 1: # DOWN
                                     wps_down = current_time
-                                    # Do not set Shift yet; wait for timer
                                     
                                 elif ev.value == 0: # UP
                                     if self.is_shift:
-                                        self.is_shift = False # Release shift
+                                        self.is_shift = False
                                         needs_redraw = True
                                     else:
-                                        # Short press logic
                                         if self.state == "POPUP":
-                                            # Strict Rule: WPS dismisses popup
                                             self.state = "MENU"
                                             needs_redraw = True
                                             
@@ -326,7 +362,7 @@ class App:
                                             self.selected_idx = (self.selected_idx + 1) % len(menu)
                                             needs_redraw = True
                                             
-                                    wps_down = 0 # Reset timer
+                                    wps_down = 0
 
                 except OSError: pass
             

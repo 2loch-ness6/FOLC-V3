@@ -111,3 +111,45 @@ class WirelessTool:
         # Sends deauth frames
         subprocess.run(["aireplay-ng", "--deauth", str(count), "-a", target_mac, self.interface])
 
+class NmapTool:
+    def __init__(self, target="192.168.1.0/24"):
+        self.target = target
+
+    def quick_scan(self):
+        """Performs a quick ping scan to find hosts"""
+        hosts = []
+        try:
+            # -sn: Ping Scan - disable port scan
+            result = subprocess.check_output(["nmap", "-sn", self.target], encoding='utf-8')
+            for line in result.split('\n'):
+                if "Nmap scan report for" in line:
+                    parts = line.split()
+                    ip = parts[-1].strip('()')
+                    hosts.append(ip)
+        except Exception as e:
+            print(f"[NmapTool] Scan failed: {e}")
+            # If nmap fails, fallback to simple error list
+            hosts.append("Scan Failed")
+        return hosts
+
+class MacChangerTool:
+    def __init__(self, interface="wlan0"):
+        self.interface = interface
+
+    def random_mac(self):
+        try:
+            subprocess.run(["ifconfig", self.interface, "down"])
+            subprocess.run(["macchanger", "-r", self.interface], check=True)
+            subprocess.run(["ifconfig", self.interface, "up"])
+            return True
+        except:
+            return False
+
+    def reset_mac(self):
+        try:
+            subprocess.run(["ifconfig", self.interface, "down"])
+            subprocess.run(["macchanger", "-p", self.interface], check=True)
+            subprocess.run(["ifconfig", self.interface, "up"])
+            return True
+        except:
+            return False
