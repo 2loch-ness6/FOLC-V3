@@ -1,45 +1,34 @@
-# GEMINI CONTEXT HANDOFF: PHASE 3 START
+# GEMINI CONTEXT HANDOFF - PROJECT MARRIOT
 
-**Date:** January 7, 2026
-**Status:** HANDOFF READY
+## OPERATIONAL STATUS: GREEN
+**Target:** Orbic Speed (RC400L)
+**Environment:** Hybrid (Host + Alpine Chroot)
+**Root Level:** FULL CAPABILITIES via Backdoor.
 
----
+## KEY DISCOVERIES
+1. **The Capability Glass Ceiling:**
+   - `adbd` drops all capabilities except `SETUID`/`SETGID` from the bounding set.
+   - Any process spawned via ADB (even with `LD_PRELOAD` root or SUID `su`) is trapped.
+   - You cannot `mount`, `chroot`, or perform `net_admin` tasks via ADB shell.
+2. **The Rayhunter Hijack (True Root):**
+   - The device's "Root of Trust" for our purposes is the `/etc/init.d/rayhunter_daemon` service.
+   - Because `init` launches it, it inherits **Full Capabilities** (`3fffffffff`).
+   - Hijacking this service is the only way to get unrestricted access.
+3. **Persistence:**
+   - Root filesystem `/` is **UBIFS Read-Write**. Modifications to `/bin` persist reboots.
+   - `LD_PRELOAD` in `/etc/init.d/adbd` grants immediate UID 0 in ADB, but capabilities remain restricted.
 
-## 1. System State Snapshot
-*   **Device:** Orbic Speed (RC400L)
-*   **Root Access:** Native Root Integration (persistent via `/data/rayhunter` hijack).
-*   **Access Methods:**
-    *   **Backdoor (Port 9999):** PRIMARY. Full capabilities (`3fffffffff`).
-    *   **Frontdoor (`adb shell su`):** SECONDARY. Restricted capabilities.
-*   **UI:** FOLC UI v10 (`foac_ui_v9.py` deployed as `folc_ui.py`).
-    *   Features: WiFi Scan, Nmap Scan, Deauth, IP Info.
-    *   Hardware: Strict state management (Power button ignored in popups).
-*   **Alpine Chroot:** Functional at `/data/alpine`.
-    *   Tools Installed: `nmap`, `macchanger`, `aircrack-ng`, `ethtool`.
-    *   Tools Missing: `mdk4`, `bettercap`.
+## ACCESS PROTOCOLS
+- **GOD MODE (Full Caps):** `adb forward tcp:9999 tcp:9999 && nc localhost 9999`
+- **BASIC ROOT (File Ops):** `adb shell` (Lands in `#` due to `nosetuid.so`)
 
-## 2. Recent Actions
-*   **Phase 2 Completion:** Migrated from service hijack wrapper to `orbital_os_init.sh`.
-*   **Frontdoor Analysis:** Confirmed immutable system partition prevents persistent `/bin/su` modification.
-*   **UI Hardening:** Implemented v10 features with non-blocking input loop and state awareness.
-*   **Core Update:** Updated `folc_core.py` with `NmapTool` and `MacChangerTool`.
+## CURRENT ARCHITECTURE
+- `/data/rayhunter/orbital_os_init.sh` is the master init script.
+- It mounts Alpine, sets up the symlink bridge, and spawns the backdoor.
+- Web C2 runs on port 8000.
+- Async UI runs as `foac_ui_v9.py`.
 
-## 3. Phase 3 Objectives (Immediate)
-Reference: `docs/PHASE3_DIRECTIVE.md`
-
-1.  **Web Dashboard Prototype:**
-    *   Create `src/web/app.py` (Flask).
-    *   Expose logs and file manager.
-2.  **Toolchain Completion:**
-    *   Research compilation for `mdk4`.
-    *   Integrate `tshark` if possible.
-3.  **USB Ethernet:**
-    *   Research RNDIS configuration for "Plug & Play" web access.
-
-## 4. Operational Notes
-*   **Always use the Backdoor** for system operations:
-    `adb shell "echo 'cmd' | nc localhost 9999"`
-*   **UI Logs:** `/data/rayhunter/folc.log`.
-*   **Service Logs:** `/data/rayhunter/orbital_os.log`.
-
-**READY FOR CONTEXT REFRESH.**
+## NEXT STEPS (PHASE 3)
+1. Implement WiFi Tracker Detection (Bluetooth is hardware-missing).
+2. Develop "Mission Profiles" (Automated attack scripts).
+3. Secure the C2 interface.
