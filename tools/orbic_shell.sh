@@ -1,12 +1,11 @@
 #!/bin/bash
-# FOLC-V3 Remote Entrance Script
+# FOLC-V3 Native Host Shell (Backdoor)
 
-PORT=2222
-USER="root"
-PASS="root"
+PORT=9999
 
 # Ensure ADB forward
 adb forward tcp:$PORT tcp:$PORT 2>/dev/null
 
-echo "Connecting to Orbic Speed High-Privilege Shell..."
-ssh -p $PORT -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $USER@127.0.0.1
+echo "Connecting to Orbic Speed Native Host Root (Port $PORT)..."
+echo "Note: This is a raw shell. Use 'exit' to disconnect."
+nc 127.0.0.1 $PORT
