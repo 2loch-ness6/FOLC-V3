@@ -132,6 +132,18 @@ adb_root_shell() {
     "$ADB_BIN" shell "su -c '$*'" 2>&1 | tee -a "$LOG_FILE"
 }
 
+adb_high_shell() {
+    # Try backdoor first for full capabilities
+    if netstat -tlpn 2>/dev/null | grep -q ":9999 " || "$ADB_BIN" shell "netstat -tlpn 2>/dev/null | grep -q ':9999 '"; then
+        "$ADB_BIN" forward tcp:9999 tcp:9999 >/dev/null 2>&1
+        # Send raw command to backdoor
+        echo "$*" | nc -w 3 127.0.0.1 9999 2>&1 | tee -a "$LOG_FILE"
+    else
+        # Fallback to standard root shell
+        adb_root_shell "$@"
+    fi
+}
+
 ################################################################################
 # Pre-flight Checks
 ################################################################################
@@ -187,12 +199,18 @@ test_device_connectivity() {
     
     # Test 2: Device model
     local model=$(adb_shell "getprop ro.product.model" | tr -d '\r\n')
+    if [ -z "$model" ] || [[ "$model" =~ "not found" ]]; then
+        model=$(adb_shell "cat /etc/ver.conf 2>/dev/null" | tr -d '\r\n')
+    fi
     log INFO "Device model: $model"
-    test_assert "Device is Orbic RC400L" "[[ '$model' =~ 'RC400L' ]] || [[ '$model' =~ 'Orbic' ]]" \
-        "Expected RC400L, got $model"
+    test_assert "Device is Orbic RC400L" "[[ '$model' =~ 'RC400L' ]] || [[ '$model' =~ 'ORB400L' ]] || [[ '$model' =~ 'Orbic' ]]" \
+        "Expected RC400L/ORB400L, got $model"
     
     # Test 3: Android version
     local android_version=$(adb_shell "getprop ro.build.version.release" | tr -d '\r\n')
+    if [ -z "$android_version" ] || [[ "$android_version" =~ "not found" ]]; then
+        android_version=$(adb_shell "cat /etc/version 2>/dev/null" | tr -d '\r\n')
+    fi
     log INFO "Android version: $android_version"
     
     # Test 4: Device is responsive
@@ -230,10 +248,10 @@ test_root_access() {
             "su returned UID $su_check"
         
         # Test capabilities
-        local caps=$(adb_shell "su -c 'cat /proc/self/status | grep CapEff'" 2>/dev/null | awk '{print $2}')
+        local caps=$(adb_high_shell "cat /proc/self/status | grep CapEff" 2>/dev/null | awk '{print $2}')
         log INFO "Root capabilities: $caps"
-        test_assert "Root has full capabilities" "[ -n \"$caps\" ]" \
-            "Could not read capabilities"
+        test_assert "Root has full capabilities" "[[ '$caps' =~ '3fffffffff' ]]" \
+            "Expected full capabilities (0x3fffffffff), got $caps"
     else
         test_skip "Frontdoor root test" "su binary not found"
     fi
@@ -270,11 +288,11 @@ test_alpine_chroot() {
         "/dev not mounted in chroot"
     
     # Test 3: Chroot is functional
-    if adb_root_shell "chroot /data/alpine /bin/sh -c 'echo test'" | grep -q "test" 2>/dev/null; then
+    if adb_high_shell "chroot /data/alpine /bin/sh -c 'echo test'" | grep -q "test" 2>/dev/null; then
         log PASS "Alpine chroot is functional"
         
         # Test Alpine version
-        local alpine_version=$(adb_root_shell "chroot /data/alpine cat /etc/alpine-release" 2>/dev/null | tr -d '\r\n')
+        local alpine_version=$(adb_high_shell "chroot /data/alpine cat /etc/alpine-release" 2>/dev/null | tr -d '\r\n')
         log INFO "Alpine Linux version: $alpine_version"
     else
         log FAIL "Alpine chroot is not functional"
@@ -282,10 +300,10 @@ test_alpine_chroot() {
     
     # Test 4: Python environment
     test_assert "Python3 installed in chroot" \
-        "adb_root_shell 'chroot /data/alpine which python3' >/dev/null 2>&1" \
+        "adb_high_shell 'chroot /data/alpine which python3' >/dev/null 2>&1" \
         "python3 not found in chroot"
     
-    local python_version=$(adb_root_shell "chroot /data/alpine python3 --version" 2>/dev/null | tr -d '\r\n')
+    local python_version=$(adb_high_shell "chroot /data/alpine python3 --version" 2>/dev/null | tr -d '\r\n')
     log INFO "Python version: $python_version"
 }
 
@@ -323,11 +341,11 @@ test_folc_ui() {
     fi
     
     # Test 4: Dependencies check
-    local evdev_check=$(adb_root_shell "chroot /data/alpine python3 -c 'import evdev; print(\"OK\")' 2>/dev/null" | grep "OK")
+    local evdev_check=$(adb_high_shell "chroot /data/alpine python3 -c 'import evdev; print(\"OK\")' 2>/dev/null" | grep "OK")
     test_assert "Python evdev module available" "[ -n \"$evdev_check\" ]" \
         "evdev module not installed"
     
-    local pil_check=$(adb_root_shell "chroot /data/alpine python3 -c 'import PIL; print(\"OK\")' 2>/dev/null" | grep "OK")
+    local pil_check=$(adb_high_shell "chroot /data/alpine python3 -c 'import PIL; print(\"OK\")' 2>/dev/null" | grep "OK")
     test_assert "Python PIL module available" "[ -n \"$pil_check\" ]" \
         "PIL module not installed"
 }
@@ -487,11 +505,16 @@ test_security() {
     
     # Test 1: SELinux status
     local selinux=$(adb_shell "getenforce" 2>/dev/null | tr -d '\r\n')
-    log INFO "SELinux mode: $selinux"
+    if [ -z "$selinux" ] || [[ "$selinux" =~ "not found" ]]; then
+        selinux=$(adb_shell "/system/bin/getenforce" 2>/dev/null | tr -d '\r\n')
+    fi
+    log INFO "SELinux mode: ${selinux:-unknown}"
     if [ "$selinux" = "Permissive" ] || [ "$selinux" = "Disabled" ]; then
         log PASS "SELinux is not enforcing"
-    else
+    elif [ "$selinux" = "Enforcing" ]; then
         log WARN "SELinux is enforcing (may cause issues)"
+    else
+        log INFO "SELinux status could not be determined"
     fi
     
     # Test 2: dm-verity status
@@ -518,7 +541,7 @@ test_integration() {
         "$ADB_BIN" push "$test_script" /data/local/tmp/test_wifi_scan.py >/dev/null 2>&1
         
         # Run test
-        local scan_test=$(adb_root_shell "chroot /data/alpine python3 /data/local/tmp/test_wifi_scan.py" 2>&1)
+        local scan_test=$(adb_high_shell "chroot /data/alpine python3 /data/local/tmp/test_wifi_scan.py" 2>&1)
         
         if echo "$scan_test" | grep -q "SCAN_OK"; then
             local count=$(echo "$scan_test" | grep -o "SCAN_OK:[0-9]*" | cut -d: -f2)
