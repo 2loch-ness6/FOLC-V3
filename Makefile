@@ -77,9 +77,10 @@ NOSETUID_SO := $(BUILD_DIR)/nosetuid.so
 NOSETUID_MIN_SO := $(BUILD_DIR)/nosetuid_min.so
 
 # Sources
-KSU_SRC := ksu.c
-NOSETUID_SRC := nosetuid.c
-NOSETUID_MIN_SRC := nosetuid_min.c
+KSU_SRC := src/native/ksu.c
+NOSETUID_SRC := src/native/nosetuid.c
+NOSETUID_MIN_SRC := src/native/nosetuid_min.c
+TEST_CAP_SRC := src/native/test_cap.c
 
 .PHONY: all ksu nosetuid nosetuid_min clean install help check
 
