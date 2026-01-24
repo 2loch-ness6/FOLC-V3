@@ -101,9 +101,25 @@ class APIClient:
             conn.request(method, endpoint, body, headers)
             response = conn.getresponse()
             
-            result = json.loads(response.read().decode('utf-8'))
+            response_data = response.read().decode('utf-8')
+            try:
+                result = json.loads(response_data)
+            except json.JSONDecodeError:
+                result = {"message": response_data}
+            
             conn.close()
             
+            # Standardize status
+            if response.status >= 400:
+                return {
+                    "status": "error",
+                    "code": response.status,
+                    "message": result.get("message", "Unknown error")
+                }
+            
+            if isinstance(result, dict) and "status" not in result:
+                result["status"] = "success"
+                
             return result
         except Exception as e:
             logger.error(f"API call failed: {e}")
