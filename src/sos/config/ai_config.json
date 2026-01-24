@@ -1,0 +1,53 @@
+{
+  "gemini": {
+    "enabled": true,
+    "model": "gemini-pro",
+    "api_key_env": "GEMINI_API_KEY",
+    "cli_path": "/usr/local/bin/gemini",
+    "max_tokens": 2048,
+    "temperature": 0.7
+  },
+  "claude": {
+    "enabled": true,
+    "model": "claude-3-sonnet-20240229",
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "cli_path": "/usr/local/bin/claude",
+    "max_tokens": 2048,
+    "temperature": 0.7
+  },
+  "preferred_provider": "gemini",
+  "fallback_enabled": true,
+  "max_retries": 3,
+  "timeout": 30,
+  "logging": {
+    "level": "INFO",
+    "file": "/var/log/ai_orchestrator.log",
+    "max_size_mb": 10,
+    "backup_count": 3
+  },
+  "api_gateway": {
+    "host": "127.0.0.1",
+    "port": 8888,
+    "timeout": 10
+  },
+  "system_context": {
+    "device_model": "Orbic Speed RC400L",
+    "capabilities": [
+      "wifi_scanning",
+      "cellular_modem",
+      "packet_capture",
+      "network_analysis",
+      "system_monitoring"
+    ]
+  },
+  "safety": {
+    "require_confirmation": true,
+    "dangerous_commands": [
+      "rm -rf",
+      "dd if=",
+      "reboot",
+      "poweroff"
+    ],
+    "max_api_calls_per_minute": 30
+  }
+}

@@ -275,6 +275,66 @@ For more details on frontdoor implementation, see [docs/FRONTDOOR.md](docs/FRONT
 
 ---
 
+## 🤖 SOS: AI-Powered Service Orchestration
+
+**NEW:** FOLC-V3 now includes the **Service Orchestration System (SOS)** - a comprehensive, AI-powered automation framework.
+
+### Key Features
+
+- **Native Daemons:** Hardware control running directly on the device
+- **REST API Gateway:** HTTP API for programmatic system control
+- **AI Orchestration:** Natural language command processing via Gemini/Claude
+- **Automated Operations:** AI-driven task automation and system management
+- **Real-time Monitoring:** System and network status APIs
+
+### Quick Start
+
+```bash
+# Deploy SOS
+./tools/deploy_sos.sh
+
+# Start services
+adb shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh start'"
+
+# Check status
+adb shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh status'"
+
+# Forward API port
+adb forward tcp:8888 tcp:8888
+
+# Test API
+curl http://127.0.0.1:8888/api/health
+curl http://127.0.0.1:8888/api/wifi/scan
+```
+
+### AI Interactive Mode
+
+```bash
+# Enter AI assistant mode
+adb shell "su -c 'chroot /data/alpine /usr/local/bin/ai_orchestrator.py --interactive'"
+
+# Natural language commands:
+> scan wifi networks
+> show system status
+> optimize network performance
+```
+
+### API Endpoints
+
+- `GET /api/health` - Health check
+- `GET /api/wifi/status` - WiFi interface status
+- `GET /api/wifi/scan` - Scan WiFi networks
+- `GET /api/cellular/status` - Cellular modem status
+- `GET /api/system/info` - System information
+- `POST /api/command` - Custom hardware commands
+
+### Documentation
+
+- **[SOS Quick Start](docs/SOS_QUICKSTART.md)** - 5-minute setup guide
+- **[SOS Documentation](docs/SOS_DOCUMENTATION.md)** - Complete reference
+
+---
+
 ## 🔮 Future Possibilities
 
 This project opens up numerous interesting possibilities:
@@ -308,6 +368,8 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for detailed feature plans.
 
 - **[INSTALL.md](INSTALL.md)** - Detailed installation guide
 - **[BUILD.md](BUILD.md)** - Building native binaries (ksu, nosetuid.so)
+- **[docs/SOS_QUICKSTART.md](docs/SOS_QUICKSTART.md)** - SOS quick start (5 min)
+- **[docs/SOS_DOCUMENTATION.md](docs/SOS_DOCUMENTATION.md)** - SOS complete reference
 - **[docs/FRONTDOOR.md](docs/FRONTDOOR.md)** - Frontdoor root implementation guide
 - **[docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)** - Command quick reference
 - **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and fixes

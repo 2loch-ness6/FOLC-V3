@@ -4,6 +4,11 @@
 evdev>=1.6.0        # Input device handling
 Pillow>=9.0.0       # Framebuffer graphics
 
+# SOS (Service Orchestration System) dependencies
+# Required for AI-powered automation in Alpine chroot
+google-generativeai>=0.3.0  # Gemini AI integration
+anthropic>=0.7.0            # Claude AI integration
+
 # Optional dependencies (for development/web features)
 # Uncomment if needed:
 
