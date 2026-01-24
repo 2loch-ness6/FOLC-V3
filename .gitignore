@@ -27,6 +27,11 @@ ENV/
 *.log
 capture.*
 
+# SOS runtime files
+*.pid
+*.sock
+/tmp/hw_ctl.sock
+
 # IDE
 .vscode/
 .idea/
@@ -43,6 +48,11 @@ Thumbs.db
 *.pem
 credentials.txt
 secrets.txt
+
+# AI API Keys (never commit)
+*api_key*
+.env
+.env.local
 
 # Build artifacts
 dist/
