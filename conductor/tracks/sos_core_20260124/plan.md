@@ -8,9 +8,9 @@
 - [ ] Task: Conductor - User Manual Verification 'Foundation & Testing Infrastructure' (Protocol in workflow.md)
 
 ## Phase 2: Core Stabilization
-- [ ] Task: Refactor `AIOrchestrator` for standardized hardware interfacing
-    - [ ] Write unit tests for API interface
-    - [ ] Update `src/sos/ai/ai_orchestrator.py` to use standardized message formats
+- [x] Task: Refactor `AIOrchestrator` for standardized hardware interfacing 4f3c5b5
+    - [x] Write unit tests for API interface
+    - [x] Update `src/sos/ai/ai_orchestrator.py` to use standardized message formats
 - [ ] Task: Implement robust error handling and retries
     - [ ] Write tests for failure scenarios (LLM timeout, hardware busy)
     - [ ] Implement retry logic in orchestrator
