@@ -11,9 +11,9 @@
 - [x] Task: Refactor `AIOrchestrator` for standardized hardware interfacing 4f3c5b5
     - [x] Write unit tests for API interface
     - [x] Update `src/sos/ai/ai_orchestrator.py` to use standardized message formats
-- [ ] Task: Implement robust error handling and retries
-    - [ ] Write tests for failure scenarios (LLM timeout, hardware busy)
-    - [ ] Implement retry logic in orchestrator
+- [x] Task: Implement robust error handling and retries cd2d696
+    - [x] Write tests for failure scenarios (LLM timeout, hardware busy)
+    - [x] Implement retry logic in orchestrator
 - [ ] Task: Enhance configuration management
     - [ ] Write tests for `ai_config.json` loading and validation
     - [ ] Update orchestrator to handle corrupt/missing config
