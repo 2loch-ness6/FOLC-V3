@@ -102,6 +102,7 @@ class APIClient:
     
     def call_api(self, method, endpoint, data=None):
         """Make API call to gateway"""
+        logger.info(f"API Request: {method} {endpoint}")
         try:
             conn = http.client.HTTPConnection(self.host, self.port, timeout=10)
             
@@ -112,6 +113,7 @@ class APIClient:
             response = conn.getresponse()
             
             response_data = response.read().decode('utf-8')
+            logger.info(f"API Response: {response.status} from {endpoint}")
             try:
                 result = json.loads(response_data)
             except json.JSONDecodeError:
