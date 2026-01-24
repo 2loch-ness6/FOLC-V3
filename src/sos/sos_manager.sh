@@ -24,9 +24,13 @@ API_GATEWAY_DAEMON="${NATIVE_ENV}/api_gateway_daemon.py"
 # AI orchestrator (Alpine chroot)
 AI_ORCHESTRATOR="${ALPINE_ROOT}/usr/local/bin/ai_orchestrator.py"
 
-# PID files
+# PID files (Host paths for manager to check)
 HW_CTL_PID="/data/rayhunter/hw_ctl_daemon.pid"
 API_GATEWAY_PID="/data/rayhunter/api_gateway_daemon.pid"
+
+# Alpine paths for the daemons themselves
+ALPINE_HW_CTL="/data/rayhunter/hw_ctl_daemon.py"
+ALPINE_API_GATEWAY="/data/rayhunter/api_gateway_daemon.py"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -54,7 +58,7 @@ start_hw_ctl() {
     fi
     
     if [ -f "$HW_CTL_DAEMON" ]; then
-        python3 "$HW_CTL_DAEMON" &
+        chroot "$ALPINE_ROOT" /usr/bin/python3 "$ALPINE_HW_CTL" &
         sleep 2
         if check_process "$HW_CTL_PID"; then
             log "Hardware Control Daemon started successfully"
@@ -77,7 +81,7 @@ start_api_gateway() {
     fi
     
     if [ -f "$API_GATEWAY_DAEMON" ]; then
-        python3 "$API_GATEWAY_DAEMON" &
+        chroot "$ALPINE_ROOT" /usr/bin/python3 "$ALPINE_API_GATEWAY" &
         sleep 2
         if check_process "$API_GATEWAY_PID"; then
             log "API Gateway Daemon started successfully"
