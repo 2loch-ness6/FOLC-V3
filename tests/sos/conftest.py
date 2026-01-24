@@ -21,6 +21,11 @@ def mock_config_data():
         "timeout": 30
     }
 
+@pytest.fixture(autouse=True)
+def mock_sleep():
+    with patch("time.sleep") as mock_s:
+        yield mock_s
+
 @pytest.fixture
 def mock_subprocess_run():
     with patch("subprocess.run") as mock_run:

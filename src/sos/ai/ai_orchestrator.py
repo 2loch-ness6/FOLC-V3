@@ -147,32 +147,42 @@ class GeminiProvider:
     
     def query(self, prompt, context=None):
         """Query Gemini with a prompt"""
-        try:
-            full_prompt = prompt
-            if context:
-                full_prompt = f"Context: {json.dumps(context)}\n\nQuery: {prompt}"
+        max_retries = self.config.get("max_retries", 3)
+        for attempt in range(max_retries):
+            try:
+                full_prompt = prompt
+                if context:
+                    full_prompt = f"Context: {json.dumps(context)}\n\nQuery: {prompt}"
+                
+                # Call Gemini CLI
+                result = subprocess.run(
+                    [self.cli_path, "chat", "--prompt", full_prompt],
+                    capture_output=True, text=True, timeout=30
+                )
+                
+                if result.returncode == 0:
+                    return {
+                        "status": "success",
+                        "provider": "gemini",
+                        "response": result.stdout.strip()
+                    }
+                else:
+                    logger.warning(f"Gemini attempt {attempt + 1} failed: {result.stderr}")
+                    if attempt == max_retries - 1:
+                        return {
+                            "status": "error",
+                            "provider": "gemini",
+                            "message": result.stderr
+                        }
+            except Exception as e:
+                logger.error(f"Gemini query attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries - 1:
+                    return {"status": "error", "message": str(e)}
             
-            # Call Gemini CLI
-            result = subprocess.run(
-                [self.cli_path, "chat", "--prompt", full_prompt],
-                capture_output=True, text=True, timeout=30
-            )
-            
-            if result.returncode == 0:
-                return {
-                    "status": "success",
-                    "provider": "gemini",
-                    "response": result.stdout.strip()
-                }
-            else:
-                return {
-                    "status": "error",
-                    "provider": "gemini",
-                    "message": result.stderr
-                }
-        except Exception as e:
-            logger.error(f"Gemini query failed: {e}")
-            return {"status": "error", "message": str(e)}
+            # Short backoff
+            time.sleep(1)
+        
+        return {"status": "error", "message": "Max retries exceeded"}
 
 
 class ClaudeProvider:
@@ -196,32 +206,42 @@ class ClaudeProvider:
     
     def query(self, prompt, context=None):
         """Query Claude with a prompt"""
-        try:
-            full_prompt = prompt
-            if context:
-                full_prompt = f"Context: {json.dumps(context)}\n\nQuery: {prompt}"
+        max_retries = self.config.get("max_retries", 3)
+        for attempt in range(max_retries):
+            try:
+                full_prompt = prompt
+                if context:
+                    full_prompt = f"Context: {json.dumps(context)}\n\nQuery: {prompt}"
+                
+                # Call Claude CLI
+                result = subprocess.run(
+                    [self.cli_path, "chat", "--prompt", full_prompt],
+                    capture_output=True, text=True, timeout=30
+                )
+                
+                if result.returncode == 0:
+                    return {
+                        "status": "success",
+                        "provider": "claude",
+                        "response": result.stdout.strip()
+                    }
+                else:
+                    logger.warning(f"Claude attempt {attempt + 1} failed: {result.stderr}")
+                    if attempt == max_retries - 1:
+                        return {
+                            "status": "error",
+                            "provider": "claude",
+                            "message": result.stderr
+                        }
+            except Exception as e:
+                logger.error(f"Claude query attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries - 1:
+                    return {"status": "error", "message": str(e)}
             
-            # Call Claude CLI
-            result = subprocess.run(
-                [self.cli_path, "chat", "--prompt", full_prompt],
-                capture_output=True, text=True, timeout=30
-            )
+            # Short backoff
+            time.sleep(1)
             
-            if result.returncode == 0:
-                return {
-                    "status": "success",
-                    "provider": "claude",
-                    "response": result.stdout.strip()
-                }
-            else:
-                return {
-                    "status": "error",
-                    "provider": "claude",
-                    "message": result.stderr
-                }
-        except Exception as e:
-            logger.error(f"Claude query failed: {e}")
-            return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": "Max retries exceeded"}
 
 
 class AIOrchestrator:

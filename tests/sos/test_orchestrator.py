@@ -55,3 +55,35 @@ class TestAIOrchestratorAPI(SOSBaseTest):
         
         assert result["status"] == "success"
         assert result["message"] == "Just some plain text"
+
+class TestAIOrchestratorRetries(SOSBaseTest):
+    """Test retry logic in AIOrchestrator"""
+    
+    def test_provider_retry_on_failure(self, mock_subprocess_run):
+        """Verify that provider retries query on failure"""
+        # Simulate 2 failures followed by a success
+        mock_subprocess_run.side_effect = [
+            MagicMock(stdout="", stderr="Busy", returncode=1),
+            MagicMock(stdout="", stderr="Timeout", returncode=1),
+            MagicMock(stdout="Success", stderr="", returncode=0)
+        ]
+        
+        provider = self.orchestrator.providers["gemini"]
+        # Note: We need to implement retry in the provider or orchestrator
+        # For this test, let's assume the provider has a query_with_retry method or the query method itself handles it
+        result = provider.query("test prompt")
+        
+        assert result["status"] == "success"
+        assert mock_subprocess_run.call_count == 3
+    
+    def test_provider_exhaust_retries(self, mock_subprocess_run):
+        """Verify that provider eventually fails after max retries"""
+        # Simulate constant failures
+        mock_subprocess_run.return_value = MagicMock(stdout="", stderr="Persistent Error", returncode=1)
+        
+        provider = self.orchestrator.providers["gemini"]
+        result = provider.query("test prompt")
+        
+        assert result["status"] == "error"
+        # max_retries is 3 in mock_config_data
+        assert mock_subprocess_run.call_count == 3
