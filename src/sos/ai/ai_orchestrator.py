@@ -50,13 +50,15 @@ class AIConfig:
                 "enabled": True,
                 "model": "gemini-pro",
                 "api_key_env": "GEMINI_API_KEY",
-                "cli_path": "/usr/local/bin/gemini"
+                "cli_path": "/usr/local/bin/gemini",
+                "max_retries": 3
             },
             "claude": {
                 "enabled": True,
                 "model": "claude-3-sonnet",
                 "api_key_env": "ANTHROPIC_API_KEY",
-                "cli_path": "/usr/local/bin/claude"
+                "cli_path": "/usr/local/bin/claude",
+                "max_retries": 3
             },
             "preferred_provider": "gemini",
             "max_retries": 3,
@@ -67,11 +69,19 @@ class AIConfig:
             try:
                 with open(self.config_file, 'r') as f:
                     loaded = json.load(f)
-                    default_config.update(loaded)
+                    self._deep_update(default_config, loaded)
             except Exception as e:
                 logger.error(f"Failed to load config: {e}")
         
         return default_config
+
+    def _deep_update(self, base_dict, update_dict):
+        """Recursively update a dictionary"""
+        for k, v in update_dict.items():
+            if k in base_dict and isinstance(base_dict[k], dict) and isinstance(v, dict):
+                self._deep_update(base_dict[k], v)
+            else:
+                base_dict[k] = v
     
     def save_config(self):
         """Save configuration to file"""
