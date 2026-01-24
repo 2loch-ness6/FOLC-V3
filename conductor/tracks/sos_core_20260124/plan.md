@@ -7,7 +7,7 @@
     - [x] Implement base test class for AI Orchestrator
 - [ ] Task: Conductor - User Manual Verification 'Foundation & Testing Infrastructure' (Protocol in workflow.md)
 
-## Phase 2: Core Stabilization
+## Phase 2: Core Stabilization [checkpoint: ad520f7]
 - [x] Task: Refactor `AIOrchestrator` for standardized hardware interfacing 4f3c5b5
     - [x] Write unit tests for API interface
     - [x] Update `src/sos/ai/ai_orchestrator.py` to use standardized message formats
