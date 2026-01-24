@@ -23,7 +23,7 @@
 - [x] Task: Standardize structured logging b2471e0
     - [x] Implement logging interface in `AIOrchestrator`
     - [x] Verify logs capture critical decision points and hardware responses
-- [ ] Task: Integration Test - End-to-End SOS flow
-    - [ ] Create an integration test script `tools/test_sos_core_e2e.py`
-    - [ ] Verify orchestrator -> daemon -> mock hardware loop
+- [x] Task: Integration Test - End-to-End SOS flow c5daaaa
+    - [x] Create an integration test script `tools/test_sos_core_e2e.py`
+    - [x] Verify orchestrator -> daemon -> mock hardware loop
 - [ ] Task: Conductor - User Manual Verification 'Integration & Logging' (Protocol in workflow.md)
