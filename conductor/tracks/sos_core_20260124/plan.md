@@ -14,9 +14,9 @@
 - [x] Task: Implement robust error handling and retries cd2d696
     - [x] Write tests for failure scenarios (LLM timeout, hardware busy)
     - [x] Implement retry logic in orchestrator
-- [ ] Task: Enhance configuration management
-    - [ ] Write tests for `ai_config.json` loading and validation
-    - [ ] Update orchestrator to handle corrupt/missing config
+- [x] Task: Enhance configuration management ccc6223
+    - [x] Write tests for `ai_config.json` loading and validation
+    - [x] Update orchestrator to handle corrupt/missing config
 - [ ] Task: Conductor - User Manual Verification 'Core Stabilization' (Protocol in workflow.md)
 
 ## Phase 3: Integration & Logging
