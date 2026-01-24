@@ -19,7 +19,7 @@
     - [x] Update orchestrator to handle corrupt/missing config
 - [ ] Task: Conductor - User Manual Verification 'Core Stabilization' (Protocol in workflow.md)
 
-## Phase 3: Integration & Logging
+## Phase 3: Integration & Logging [checkpoint: 1299bcd]
 - [x] Task: Standardize structured logging b2471e0
     - [x] Implement logging interface in `AIOrchestrator`
     - [x] Verify logs capture critical decision points and hardware responses
