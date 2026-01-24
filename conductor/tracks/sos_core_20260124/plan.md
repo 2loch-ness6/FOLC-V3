@@ -1,6 +1,6 @@
 # Implementation Plan: SOS AI Orchestration Core
 
-## Phase 1: Foundation & Testing Infrastructure
+## Phase 1: Foundation & Testing Infrastructure [checkpoint: 49c1777]
 - [x] Task: Initialize testing environment for SOS Core a0bd701
     - [x] Create `tests/sos/` directory
     - [x] Set up mocks for `google-generativeai` and `anthropic`
