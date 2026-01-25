@@ -14,9 +14,9 @@
 - [x] Task: Develop Debounced Navigation Layer 174daac
     - [x] Write unit tests for the cycle/select logic with simulated double-clicks/power signals
     - [x] Refactor `src/ui/input_manager.py` to handle the sensitive power button
-- [~] Task: Implement Framebuffer Menu System
-    - [ ] Write tests for menu transitions (Root -> AutoIOT)
-    - [ ] Implement Root and Sub-menu drawing logic in `src/ui/folc_ui.py`
+- [x] Task: Implement Framebuffer Menu System 7e47c33
+    - [x] Write tests for menu transitions (Root -> AutoIOT)
+    - [x] Implement Root and Sub-menu drawing logic in `src/ui/folc_ui.py`
 - [ ] Task: Real-time Graphics Engine
     - [ ] Write tests for sparkline generation and data buffering
     - [ ] Implement packet rate and signal strength graphs (60s history)
