@@ -23,10 +23,10 @@
 - [x] Task: Conductor - User Manual Verification 'Framebuffer UI & Navigation Filter' (Protocol in workflow.md)
 
 ## Phase 3: AutoIOT & Global Scan Engine
-- [~] Task: Implement Monitor Mode Scanner
-    - [ ] Write tests for `iw` scan output parsing (SSID, BSSID, Signal, Channel)
-    - [ ] Implement 2.4/5GHz Global Scan in `src/core/scanner.py`
-- [ ] Task: Auditing & Connection Killing Tools
+- [x] Task: Implement Monitor Mode Scanner b554c6b
+    - [x] Write tests for `iw` scan output parsing (SSID, BSSID, Signal, Channel)
+    - [x] Implement 2.4/5GHz Global Scan in `src/core/scanner.py`
+- [~] Task: Auditing & Connection Killing Tools
     - [ ] Write tests for ARP MitM/IPTables configuration logic
     - [ ] Implement deauth/connection killing scripts in `src/core/auditor.py`
 - [ ] Task: Conductor - User Manual Verification 'AutoIOT & Global Scan Engine' (Protocol in workflow.md)
