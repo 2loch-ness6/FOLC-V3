@@ -1,6 +1,6 @@
 # Implementation Plan: Field Operator UI & AutoIOT Toolkit
 
-## Phase 1: On-Device MCP Server & Infrastructure [checkpoint: 05f212c]
+## Phase 1: On-Device MCP Server & Infrastructure [checkpoint: 9c894cf]
 - [x] Task: Initialize MCP Server for Orbic Control 263d924
     - [x] Create `src/sos/ai/mcp_server.py`
     - [x] Write unit tests for tool execution (shell, network tools)
@@ -8,13 +8,13 @@
 - [x] Task: Implement Centralized State Manager 40d02c5
     - [x] Write tests for state persistence (JSON-based state for UI and Scan results)
     - [x] Implement `src/core/state_manager.py` to bridge MCP, UI, and AutoIOT
-- [ ] Task: Conductor - User Manual Verification 'On-Device MCP Server & Infrastructure' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'On-Device MCP Server & Infrastructure' (Protocol in workflow.md)
 
 ## Phase 2: Framebuffer UI & Navigation Filter
 - [x] Task: Develop Debounced Navigation Layer 174daac
     - [x] Write unit tests for the cycle/select logic with simulated double-clicks/power signals
     - [x] Refactor `src/ui/input_manager.py` to handle the sensitive power button
-- [ ] Task: Implement Framebuffer Menu System
+- [~] Task: Implement Framebuffer Menu System
     - [ ] Write tests for menu transitions (Root -> AutoIOT)
     - [ ] Implement Root and Sub-menu drawing logic in `src/ui/folc_ui.py`
 - [ ] Task: Real-time Graphics Engine
