@@ -10,20 +10,20 @@
     - [x] Implement `src/core/state_manager.py` to bridge MCP, UI, and AutoIOT
 - [x] Task: Conductor - User Manual Verification 'On-Device MCP Server & Infrastructure' (Protocol in workflow.md)
 
-## Phase 2: Framebuffer UI & Navigation Filter
+## Phase 2: Framebuffer UI & Navigation Filter [checkpoint: 829e75e]
 - [x] Task: Develop Debounced Navigation Layer 174daac
     - [x] Write unit tests for the cycle/select logic with simulated double-clicks/power signals
     - [x] Refactor `src/ui/input_manager.py` to handle the sensitive power button
 - [x] Task: Implement Framebuffer Menu System 7e47c33
     - [x] Write tests for menu transitions (Root -> AutoIOT)
     - [x] Implement Root and Sub-menu drawing logic in `src/ui/folc_ui.py`
-- [ ] Task: Real-time Graphics Engine
-    - [ ] Write tests for sparkline generation and data buffering
-    - [ ] Implement packet rate and signal strength graphs (60s history)
-- [ ] Task: Conductor - User Manual Verification 'Framebuffer UI & Navigation Filter' (Protocol in workflow.md)
+- [x] Task: Real-time Graphics Engine 829e75e
+    - [x] Write tests for sparkline generation and data buffering
+    - [x] Implement packet rate and signal strength graphs (60s history)
+- [x] Task: Conductor - User Manual Verification 'Framebuffer UI & Navigation Filter' (Protocol in workflow.md)
 
 ## Phase 3: AutoIOT & Global Scan Engine
-- [ ] Task: Implement Monitor Mode Scanner
+- [~] Task: Implement Monitor Mode Scanner
     - [ ] Write tests for `iw` scan output parsing (SSID, BSSID, Signal, Channel)
     - [ ] Implement 2.4/5GHz Global Scan in `src/core/scanner.py`
 - [ ] Task: Auditing & Connection Killing Tools
