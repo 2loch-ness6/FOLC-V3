@@ -303,47 +303,19 @@ def main():
     ui = UI()
     ui.draw()
     
-    # Signals are handled by default; cleanup is performed by the main loop's
-    # normal control flow and any associated finally blocks.
-    
-    # Auto-detect all input devices
-    devices = []
-    try:
-        for path in os.listdir("/dev/input"):
-            if path.startswith("event"):
-                try:
-                    dev = evdev.InputDevice(os.path.join("/dev/input", path))
-                    devices.append(dev)
-                except: pass
-    except: pass
-
-    if not devices:
-        return
-
-    # Input Loop
-    DEBOUNCE_DELAY = 0.05
-    devices_map = {dev.fd: dev for dev in devices}
-    last_press_time = 0
-    power_down_time = 0
+    # Initialize InputManager with UI callback
+    input_mgr = InputManager(callback=ui.handle_input)
+    input_mgr.start()
     
     try:
+        # Keep main thread alive
         while True:
-            r, w, x = select(devices_map.values(), [], [], 0.5) # Timeout 0.5s to refresh
-            
             # Check thread health - auto-transition if scan completed
             if ui.state == "SCANNING" and ui.scanning_thread and not ui.scanning_thread.is_alive():
-                # Thread finished but state wasn't updated. This can occur if:
-                # 1. Hardware scan completes but _scan_task crashes before updating state
-                # 2. Thread completes during the select() timeout window
-                # Join the thread to ensure all state updates are complete
-                ui.scanning_thread.join(timeout=0.5)
-                # Use lock to safely check state after thread completion
+                ui.scanning_thread.join(timeout=0.1)
                 with ui.state_lock:
-                    # Only transition if _scan_task didn't already update state
                     if ui.state == "SCANNING":
                         ui.scanning_thread = None
-                        ui.stop_scan_event.clear()  # Reset event for future scans
-                        # Check if results were populated before transitioning state
                         if ui.results:
                             ui.state = "RESULT"
                             ui.status_msg = "SELECT TGT"
@@ -351,49 +323,11 @@ def main():
                             ui.state = "MENU"
                             ui.status_msg = "SCAN DONE"
                         ui.draw()
-
-            if not r: continue
-
-            for dev in r:
-                dev_name = dev.name.lower()
-                is_power = "pon" in dev_name or "powerkey" in dev_name
-                is_bumper = "wps" in dev_name or "reset" in dev_name
-                
-                for event in dev.read():
-                    if event.type == evdev.ecodes.EV_KEY:
-                        now = time.time()
-                        
-                        if is_power:
-                            if event.value == 1: # Down
-                                power_down_time = now
-                            elif event.value == 0: # Up
-                                duration = now - power_down_time
-                                # Ignore extremely short glitches
-                                if duration < 0.05: continue
-                                
-                                if duration >= 0.8:
-                                    # LONG PRESS
-                                    ui.context_menu()
-                                else:
-                                    # SHORT CLICK
-                                    if ui.state == "SCANNING":
-                                        ui.cancel_scan()
-                                    else:
-                                        ui.select()
-                        elif is_bumper:
-                            # Logic for Bumper (Scroll) - Trigger on Press
-                            if event.value == 1:
-                                if now - last_press_time < DEBOUNCE_DELAY: continue
-                                last_press_time = now
-                                
-                                if ui.state == "SCANNING":
-                                    ui.cancel_scan()
-                                else:
-                                    ui.next()
-                        else:
-                            # Unknown button, log it or ignore
-                            pass
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        print("\nExiting...")
     finally:
+        input_mgr.stop()
         ui.cleanup()
 
 if __name__ == "__main__":

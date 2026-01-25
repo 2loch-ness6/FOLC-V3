@@ -25,7 +25,8 @@ class InputManager:
         
         # Config
         self.long_press_threshold = 0.8 # Seconds
-        self.debounce_window = 0.05      # Seconds
+        self.debounce_window = 0.25      # Seconds
+        self.glitch_filter = 0.05       # Seconds
         
         # State
         self.power_down_time = 0
@@ -103,27 +104,27 @@ class InputManager:
         # LOGIC: POWER BUTTON
         if is_power or event.code == KEY_POWER:
             if event.value == 1: # DOWN
-                # Prevent bounce: only record first DOWN while button is not already pressed
                 if not self.power_is_down:
-                    # First press
                     self.power_down_time = now
                     self.power_is_down = True
             elif event.value == 0: # UP
-                if not self.power_is_down: return # Glitch or startup state
+                if not self.power_is_down: return
                 self.power_is_down = False
                 
                 duration = now - self.power_down_time
+                # Glitch Filter: ignore extremely short pulses (<50ms)
+                if duration < self.glitch_filter:
+                    print(f"[INPUT] Glitch filtered (duration: {duration:.3f}s)")
+                    return
+
                 if duration >= self.long_press_threshold:
                     self._emit("CONTEXT", "POWER_LONG")
                 else:
                     self._emit("SELECT", "POWER_SHORT")
 
         # LOGIC: AUX BUTTONS (WPS / RESET)
-        # These buttons can be glitchy or cause reboots.
-        # We treat them as "NEXT" (Scroll)
         elif is_aux or event.code in [KEY_WPS, KEY_RESET]:
             if event.value == 1: # DOWN
-                # We emit on DOWN for navigation to feel snappy
                 self._emit("NEXT", "AUX_BTN")
             
             # NOTE: If the Reset button causes a hardware reboot, 
