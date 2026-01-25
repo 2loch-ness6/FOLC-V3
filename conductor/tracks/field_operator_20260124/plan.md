@@ -22,7 +22,7 @@
     - [x] Implement packet rate and signal strength graphs (60s history)
 - [x] Task: Conductor - User Manual Verification 'Framebuffer UI & Navigation Filter' (Protocol in workflow.md)
 
-## Phase 3: AutoIOT & Global Scan Engine
+## Phase 3: AutoIOT & Global Scan Engine [checkpoint: 3c9d0c8]
 - [x] Task: Implement Monitor Mode Scanner b554c6b
     - [x] Write tests for `iw` scan output parsing (SSID, BSSID, Signal, Channel)
     - [x] Implement 2.4/5GHz Global Scan in `src/core/scanner.py`
