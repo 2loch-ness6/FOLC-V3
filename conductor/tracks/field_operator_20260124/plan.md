@@ -11,9 +11,9 @@
 - [ ] Task: Conductor - User Manual Verification 'On-Device MCP Server & Infrastructure' (Protocol in workflow.md)
 
 ## Phase 2: Framebuffer UI & Navigation Filter
-- [ ] Task: Develop Debounced Navigation Layer
-    - [ ] Write unit tests for the cycle/select logic with simulated double-clicks/power signals
-    - [ ] Refactor `src/ui/input_manager.py` to handle the sensitive power button
+- [x] Task: Develop Debounced Navigation Layer 174daac
+    - [x] Write unit tests for the cycle/select logic with simulated double-clicks/power signals
+    - [x] Refactor `src/ui/input_manager.py` to handle the sensitive power button
 - [ ] Task: Implement Framebuffer Menu System
     - [ ] Write tests for menu transitions (Root -> AutoIOT)
     - [ ] Implement Root and Sub-menu drawing logic in `src/ui/folc_ui.py`
