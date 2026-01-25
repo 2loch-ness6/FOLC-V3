@@ -1,6 +1,6 @@
 # Implementation Plan: Field Operator UI & AutoIOT Toolkit
 
-## Phase 1: On-Device MCP Server & Infrastructure
+## Phase 1: On-Device MCP Server & Infrastructure [checkpoint: 05f212c]
 - [x] Task: Initialize MCP Server for Orbic Control 263d924
     - [x] Create `src/sos/ai/mcp_server.py`
     - [x] Write unit tests for tool execution (shell, network tools)
