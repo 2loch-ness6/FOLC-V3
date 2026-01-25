@@ -26,9 +26,9 @@
 - [x] Task: Implement Monitor Mode Scanner b554c6b
     - [x] Write tests for `iw` scan output parsing (SSID, BSSID, Signal, Channel)
     - [x] Implement 2.4/5GHz Global Scan in `src/core/scanner.py`
-- [~] Task: Auditing & Connection Killing Tools
-    - [ ] Write tests for ARP MitM/IPTables configuration logic
-    - [ ] Implement deauth/connection killing scripts in `src/core/auditor.py`
+- [x] Task: Auditing & Connection Killing Tools 52fd8ec
+    - [x] Write tests for ARP MitM/IPTables configuration logic
+    - [x] Implement deauth/connection killing scripts in `src/core/auditor.py`
 - [ ] Task: Conductor - User Manual Verification 'AutoIOT & Global Scan Engine' (Protocol in workflow.md)
 
 ## Phase 4: AI Orchestration (Nexus Gemini Port)
