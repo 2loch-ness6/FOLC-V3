@@ -5,9 +5,9 @@
     - [x] Create `src/sos/ai/mcp_server.py`
     - [x] Write unit tests for tool execution (shell, network tools)
     - [x] Implement core tool definitions: `execute_command`, `read_ui_state`, `write_ui_state`
-- [ ] Task: Implement Centralized State Manager
-    - [ ] Write tests for state persistence (JSON-based state for UI and Scan results)
-    - [ ] Implement `src/core/state_manager.py` to bridge MCP, UI, and AutoIOT
+- [x] Task: Implement Centralized State Manager 40d02c5
+    - [x] Write tests for state persistence (JSON-based state for UI and Scan results)
+    - [x] Implement `src/core/state_manager.py` to bridge MCP, UI, and AutoIOT
 - [ ] Task: Conductor - User Manual Verification 'On-Device MCP Server & Infrastructure' (Protocol in workflow.md)
 
 ## Phase 2: Framebuffer UI & Navigation Filter
