@@ -1,10 +1,10 @@
 # Implementation Plan: Field Operator UI & AutoIOT Toolkit
 
 ## Phase 1: On-Device MCP Server & Infrastructure
-- [ ] Task: Initialize MCP Server for Orbic Control
-    - [ ] Create `src/sos/ai/mcp_server.py`
-    - [ ] Write unit tests for tool execution (shell, network tools)
-    - [ ] Implement core tool definitions: `execute_command`, `read_ui_state`, `write_ui_state`
+- [x] Task: Initialize MCP Server for Orbic Control 263d924
+    - [x] Create `src/sos/ai/mcp_server.py`
+    - [x] Write unit tests for tool execution (shell, network tools)
+    - [x] Implement core tool definitions: `execute_command`, `read_ui_state`, `write_ui_state`
 - [ ] Task: Implement Centralized State Manager
     - [ ] Write tests for state persistence (JSON-based state for UI and Scan results)
     - [ ] Implement `src/core/state_manager.py` to bridge MCP, UI, and AutoIOT
