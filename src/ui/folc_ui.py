@@ -53,56 +53,34 @@ def draw_fb(image):
 
 class UI:
     def __init__(self):
-        self.menu_items = ["SCAN FREQUENCIES", "PACKET HARVEST", "DEAUTH PULSE", "REBOOT"]
+        self.root_items = ["POWER", "SETTINGS", "TOOLS", "AutoIOT"]
+        self.autoiot_items = ["ANALYSIS", "MAPPING", "METRICS", "VECTORS", "PAYLOADS", "CC"]
+        self.menu_items = self.root_items
         self.current_idx = 0
-        self.state = "MENU" 
+        self.state = "MENU" # MENU, AUTO_IOT, SCANNING, RESULT, CONTEXT
         self.results = [] # List of (SSID, BSSID, Signal)
         self.target = None # (SSID, BSSID)
         self.status_msg = "READY"
         self.scan_idx = 0
         self.scanning_thread = None
-        self.stop_scan_event = threading.Event()  # Thread-safe flag
-        self.state_lock = threading.Lock()  # Protects state transitions
+        self.stop_scan_event = threading.Event()
+        self.state_lock = threading.Lock()
 
     def cleanup(self):
         """Clean up resources, especially threads"""
         if self.scanning_thread and self.scanning_thread.is_alive():
             self.stop_scan_event.set()
             self.scanning_thread.join(timeout=2.0)
-            # Check if thread actually terminated
             if self.scanning_thread.is_alive():
-                # Thread didn't terminate - log to stderr
                 print("WARNING: Scanning thread did not terminate within timeout", file=sys.stderr)
         self.scanning_thread = None
 
-    def handle_input(self, event):
-        """Callback for InputManager events"""
-        print(f"UI Received: {event.action} from {event.source}")
-        
-        if event.action == "SELECT":
-            if self.state == "SCANNING":
-                self.cancel_scan()
-            else:
-                self.select()
-                
-        elif event.action == "NEXT":
-            if self.state == "SCANNING":
-                self.cancel_scan()
-            else:
-                self.next()
-                
-        elif event.action == "CONTEXT":
-            self.context_menu()
-            
-        elif event.action == "BACK":
-            self.back()
-            
     def context_menu(self):
         # Triggered by Long Press Power
         if self.state == "RESULT" and self.results:
             self.state = "CONTEXT"
             self.status_msg = "DETAILS"
-        elif self.state == "MENU":
+        elif self.state in ["MENU", "AUTO_IOT"]:
             self.state = "CONTEXT"
             self.status_msg = "SYS INFO"
         self.draw()
@@ -113,16 +91,14 @@ class UI:
         
         # Header
         header_color = RED
-        if self.state == "PULSING": header_color = ORANGE
+        if self.state == "AUTO_IOT": header_color = ORANGE
         if self.state == "CONTEXT": header_color = CYAN
         
         draw.rectangle((0, 0, WIDTH, 18), fill=header_color)
-        draw.text((5, 4), "FOLC v3", fill=BLACK)
+        draw.text((5, 4), "FOLC Field Op", fill=BLACK)
         
         status_color = GREEN
-        if "SCAN" in self.status_msg: status_color = CYAN
-        if "ERR" in self.status_msg or "NO TGT" in self.status_msg: status_color = RED
-        if "ABORTED" in self.status_msg: status_color = ORANGE
+        if "SCAN" in self.status_msg or "ANALYZ" in self.status_msg: status_color = CYAN
         
         draw.text((5, 22), f"STA: {self.status_msg}", fill=status_color)
         
@@ -132,7 +108,7 @@ class UI:
             tgt_text = f"TGT: {self.target[0][:10]}"
         draw.text((5, HEIGHT-12), tgt_text, fill=ORANGE)
 
-        if self.state == "MENU":
+        if self.state in ["MENU", "AUTO_IOT"]:
             y = 38
             for i, item in enumerate(self.menu_items):
                 color = WHITE
@@ -142,69 +118,78 @@ class UI:
                     prefix = ">"
                     draw.rectangle((0, y-1, WIDTH, y+11), fill=(30, 30, 30))
                 draw.text((10, y), f"{prefix} {item}", fill=color)
-                y += 18
+                y += 14
 
         elif self.state == "SCANNING":
             draw.text((20, 50), "SCANNING...", fill=CYAN)
             draw.text((20, 65), "PLEASE WAIT", fill=WHITE)
-            draw.text((20, 80), "PWR TO ABORT", fill=RED)
             
         elif self.state == "RESULT":
             draw.text((5, 38), f"FOUND: {len(self.results)}", fill=CYAN)
             y = 52
-            if not self.results:
-                draw.text((10, y), "NONE DETECTED", fill=RED)
-            else:
-                # Show 4 items, centered around scan_idx
-                start_i = 0
-                if self.scan_idx > 3:
-                    start_i = self.scan_idx - 3
-                
-                visible_results = self.results[start_i : start_i+4]
-                
-                for i, (ssid, bssid, sig) in enumerate(visible_results):
-                    actual_idx = start_i + i
-                    color = WHITE
-                    prefix = " "
-                    if actual_idx == self.scan_idx:
-                        color = ORANGE
-                        prefix = ">"
-                        draw.rectangle((0, y-1, WIDTH, y+11), fill=(30, 30, 30))
-                    
-                    draw.text((10, y), f"{prefix}{sig} {ssid[:8]}", fill=color)
-                    y += 14
+            start_i = max(0, self.scan_idx - 3)
+            visible_results = self.results[start_i : start_i+4]
+            
+            for i, (ssid, bssid, sig) in enumerate(visible_results):
+                actual_idx = start_i + i
+                color = ORANGE if actual_idx == self.scan_idx else WHITE
+                draw.text((10, y), f"{sig} {ssid[:8]}", fill=color)
+                y += 14
 
         elif self.state == "CONTEXT":
-            # Detail View
-            if "SYS" in self.status_msg:
-                # Get Cell Info
-                cell_ip = "No Net"
-                if CELL:
-                    info = CELL.get_info()
-                    if info["ip"]:
-                        cell_ip = info["ip"]
-                
-                draw.text((5, 40), "SYSTEM INFO:", fill=WHITE)
-                draw.text((5, 55), f"Cell IP: {cell_ip}", fill=GRAY)
-                draw.text((5, 70), "Rooted: YES", fill=GREEN)
-                draw.text((5, 85), "Hold PWR: Back", fill=ORANGE)
-            elif "DETAILS" in self.status_msg and self.results:
-                # Show full details of selected network
-                ssid, bssid, sig = self.results[self.scan_idx]
-                draw.text((5, 40), f"SSID: {ssid[:12]}", fill=WHITE)
-                draw.text((5, 55), f"MAC: {bssid}", fill=GRAY)
-                draw.text((5, 70), f"SIG: {sig}", fill=CYAN)
-                draw.text((5, 85), "Hold PWR: Back", fill=ORANGE)
+            # Detail View / Sys Info
+            draw.text((5, 40), "SYSTEM STATUS:", fill=WHITE)
+            # Placeholder for dynamic metrics from state_manager
+            draw.text((5, 55), "CPU: 12%  MEM: 45MB", fill=GRAY)
+            draw.text((5, 70), "NET: rmnet0 (UP)", fill=GREEN)
+            draw.text((5, 85), "Hold PWR: Back", fill=ORANGE)
 
         draw_fb(img)
 
-    def next(self):
+    def select(self):
         if self.state == "MENU":
-            self.current_idx = (self.current_idx + 1) % len(self.menu_items)
+            item = self.menu_items[self.current_idx]
+            if item == "AutoIOT":
+                self.state = "AUTO_IOT"
+                self.menu_items = self.autoiot_items
+                self.current_idx = 0
+            elif item == "POWER":
+                self.status_msg = "REBOOTING..."
+                self.draw()
+                subprocess.run(["reboot"])
+            
+        elif self.state == "AUTO_IOT":
+            item = self.menu_items[self.current_idx]
+            if item == "ANALYSIS":
+                self.state = "SCANNING"
+                self.status_msg = "SCANNING"
+                self.stop_scan_event.clear()
+                self.scanning_thread = threading.Thread(target=self._scan_task, daemon=True)
+                self.scanning_thread.start()
+
+        elif self.state == "SCANNING":
+            self.cancel_scan()
+
         elif self.state == "RESULT":
             if self.results:
-                self.scan_idx = (self.scan_idx + 1) % len(self.results)
+                selected = self.results[self.scan_idx]
+                self.target = (selected[0], selected[1])
+                self.status_msg = f"TGT: {selected[0][:6]}"
+            self.state = "MENU"
+            self.menu_items = self.root_items
+        
+        elif self.state == "CONTEXT":
+            self.back()
+        
         self.draw()
+
+    def cancel_scan(self):
+        if self.state == "SCANNING":
+            self.cleanup()
+            self.state = "MENU"
+            self.menu_items = self.root_items
+            self.status_msg = "ABORTED"
+            self.draw()
 
     def _scan_task(self):
         results = []
@@ -214,7 +199,6 @@ class UI:
             time.sleep(2) # Mock
             results = [("DEMO_NET", "00:11:22:33:44:55", "-50")]
         
-        # Only update if not aborted
         if not self.stop_scan_event.is_set():
             with self.state_lock:
                 self.results = results
@@ -224,80 +208,26 @@ class UI:
                 self.scanning_thread = None
             self.draw()
 
-    def cancel_scan(self):
-        if self.state == "SCANNING":
-            # Delegate thread cleanup to the shared cleanup routine
-            self.cleanup()
-            self.state = "MENU"
-            self.status_msg = "ABORTED"
-            self.draw()
-
-    def select(self):
-        if self.state == "MENU":
-            item = self.menu_items[self.current_idx]
-            
-            if item == "SCAN FREQUENCIES":
-                self.state = "SCANNING"
-                self.status_msg = "SCANNING"
-                self.stop_scan_event.clear()  # Reset event for new scan
-                self.draw()
-                # Start Thread (daemon=True for clean exit)
-                self.scanning_thread = threading.Thread(target=self._scan_task, daemon=True)
-                self.scanning_thread.start()
-            
-            elif item == "PACKET HARVEST":
-                self.status_msg = "SNIFFING..."
-                self.draw()
-                if WIFI:
-                    WIFI.packet_sniff(duration=5)
-                time.sleep(1)
-                self.status_msg = "CAPTURED"
-            
-            elif item == "DEAUTH PULSE":
-                if not self.target:
-                    self.status_msg = "NO TARGET!"
-                else:
-                    self.state = "PULSING"
-                    self.status_msg = "FIRE: " + self.target[0][:5]
-                    self.draw()
-                    if WIFI:
-                        WIFI.deauth(self.target[1], count=10)
-                    else:
-                        time.sleep(2)
-                    self.state = "MENU"
-                    self.status_msg = "ATTACK SENT"
-            
-            elif item == "REBOOT":
-                self.status_msg = "REBOOTING..."
-                self.draw()
-                subprocess.run(["reboot"])
-
-        elif self.state == "SCANNING":
-            # POWER BUTTON in SCANNING = CANCEL
-            self.cancel_scan()
-
+    def next(self):
+        if self.state in ["MENU", "AUTO_IOT"]:
+            self.current_idx = (self.current_idx + 1) % len(self.menu_items)
         elif self.state == "RESULT":
-            # User selected a network from result list
             if self.results:
-                selected = self.results[self.scan_idx]
-                self.target = (selected[0], selected[1]) # SSID, BSSID
-                self.status_msg = f"TGT: {selected[0][:6]}"
-            self.state = "MENU"
-        
-        elif self.state == "CONTEXT":
-            self.state = "MENU"
-            if self.results: self.state = "RESULT"
-            self.status_msg = "READY"
-        
+                self.scan_idx = (self.scan_idx + 1) % len(self.results)
         self.draw()
 
     def back(self):
-        if self.state == "SCANNING":
-            self.cancel_scan()
-        else:
+        if self.state == "AUTO_IOT":
             self.state = "MENU"
+            self.menu_items = self.root_items
+            self.current_idx = 3 # Index of AutoIOT in root
+        elif self.state == "SCANNING":
+            self.cancel_scan()
+        elif self.state in ["RESULT", "CONTEXT"]:
+            self.state = "MENU"
+            self.menu_items = self.root_items
             self.status_msg = "READY"
-            self.draw()
+        self.draw()
 
 def main():
     ui = UI()
