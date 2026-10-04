@@ -25,7 +25,8 @@ NC='\033[0m' # No Color
 # Configuration
 LOG_DIR="/tmp/folc_test_logs"
 LOG_FILE="$LOG_DIR/test_$(date +%Y%m%d_%H%M%S).log"
-ADB_BIN="/bin/adb"
+DEVICE="e830926d"
+ADB_BIN="/bin/adb -s $DEVICE"
 DEVICE_SERIAL=""
 TEST_RESULTS=()
 

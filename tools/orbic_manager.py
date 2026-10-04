@@ -9,7 +9,8 @@ import hashlib
 # Configuration
 # We use the HOST ADB binary via nsenter to ensure connection stability
 # and avoid conflicts between container/host adb servers.
-ADB_BIN = "nsenter -t 1 -m /bin/adb" 
+DEVICE = "e830926d"
+ADB_BIN = "nsenter -t 1 -m /bin/adb -s " + DEVICE
 VERBOSE = True 
 
 # Map local files to device paths

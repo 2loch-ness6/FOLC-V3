@@ -57,33 +57,46 @@ class UI:
         self.autoiot_items = ["ANALYSIS", "MAPPING", "METRICS", "VECTORS", "PAYLOADS", "CC"]
         self.menu_items = self.root_items
         self.current_idx = 0
-        self.state = "MENU" # MENU, AUTO_IOT, SCANNING, RESULT, CONTEXT
-        self.results = [] # List of (SSID, BSSID, Signal)
-        self.target = None # (SSID, BSSID)
+        self.state = "MENU" 
+        self.results = [] 
+        self.target = None 
         self.status_msg = "READY"
         self.scan_idx = 0
         self.scanning_thread = None
         self.stop_scan_event = threading.Event()
         self.state_lock = threading.Lock()
+        
+        # Real-time Metrics (60s history)
+        self.metrics = {
+            "packet_rate": [0] * 60,
+            "signal_strength": [0] * 60
+        }
 
-    def cleanup(self):
-        """Clean up resources, especially threads"""
-        if self.scanning_thread and self.scanning_thread.is_alive():
-            self.stop_scan_event.set()
-            self.scanning_thread.join(timeout=2.0)
-            if self.scanning_thread.is_alive():
-                print("WARNING: Scanning thread did not terminate within timeout", file=sys.stderr)
-        self.scanning_thread = None
+    def add_metric_point(self, metric_name, value):
+        """Adds a new data point to the metric buffer and maintains 60s history"""
+        if metric_name in self.metrics:
+            self.metrics[metric_name].append(value)
+            # Keep only the last 60 points
+            self.metrics[metric_name] = self.metrics[metric_name][-60:]
 
-    def context_menu(self):
-        # Triggered by Long Press Power
-        if self.state == "RESULT" and self.results:
-            self.state = "CONTEXT"
-            self.status_msg = "DETAILS"
-        elif self.state in ["MENU", "AUTO_IOT"]:
-            self.state = "CONTEXT"
-            self.status_msg = "SYS INFO"
-        self.draw()
+    def _generate_sparkline_coords(self, metric_name, width, height, x_offset, y_offset):
+        """Generates pixel coordinates for a sparkline graph"""
+        data = self.metrics.get(metric_name, [])
+        if not data: return []
+        
+        coords = []
+        max_val = max(data) if max(data) > 0 else 1
+        min_val = min(data)
+        range_val = max_val - min_val if max_val != min_val else 1
+        
+        x_step = width / (len(data) - 1) if len(data) > 1 else 0
+        
+        for i, val in enumerate(data):
+            x = int(x_offset + (i * x_step))
+            # Invert Y because (0,0) is top-left
+            y = int(y_offset + height - ((val - min_val) / range_val * height))
+            coords.append((x, y))
+        return coords
 
     def draw(self):
         img = Image.new("RGB", (WIDTH, HEIGHT), BLACK)
@@ -102,6 +115,19 @@ class UI:
         
         draw.text((5, 22), f"STA: {self.status_msg}", fill=status_color)
         
+        # Metrics Visuals (Sparklines) - Bottom right corner, above footer
+        # Packet Rate Graph
+        draw.text((WIDTH-65, 22), "PKT:", fill=GRAY)
+        pkt_coords = self._generate_sparkline_coords("packet_rate", 40, 10, WIDTH-45, 22)
+        if len(pkt_coords) > 1:
+            draw.line(pkt_coords, fill=CYAN, width=1)
+            
+        # Signal Strength Graph
+        draw.text((WIDTH-65, 34), "SIG:", fill=GRAY)
+        sig_coords = self._generate_sparkline_coords("signal_strength", 40, 10, WIDTH-45, 34)
+        if len(sig_coords) > 1:
+            draw.line(sig_coords, fill=GREEN, width=1)
+
         # Target Info
         tgt_text = "TGT: NONE"
         if self.target:

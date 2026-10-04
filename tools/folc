@@ -1,0 +1,232 @@
+#!/bin/sh
+########################################################################
+# folc — Client-side control script for Orbic netcut appliance
+# Run from your phone/computer. Handles ADB forwarding + SSH transparently.
+#
+# Usage:
+#   folc                    Interactive menu
+#   folc status             Connection & attack status
+#   folc attack             Scan + attack (uses configured target)
+#   folc scan               Scan target network for hosts
+#   folc stop               Stop attack, restore ARP
+#   folc config <ssid> <psk> Set target network
+#   folc connect            Connect to target network
+#   folc disconnect         Disconnect from target
+#   folc shell              Drop into SSH shell on Orbic
+#   folc boot               Run boot wrapper (kills services, connects WiFi)
+########################################################################
+
+SSH_PORT=2222
+SSH_KEY=""
+BACKDOOR_PORT=9999
+
+# Find SSH key
+for k in "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_rsa"; do
+    if [ -f "$k" ]; then
+        SSH_KEY="$k"
+        break
+    fi
+done
+
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ServerAliveInterval=10 -o LogLevel=ERROR"
+
+setup_tunnel() {
+    adb forward tcp:$SSH_PORT tcp:$SSH_PORT 2>/dev/null
+    adb forward tcp:$BACKDOOR_PORT tcp:$BACKDOOR_PORT 2>/dev/null
+}
+
+check_device() {
+    if ! adb devices 2>/dev/null | grep -q "device$"; then
+        echo "[-] No Orbic device connected via USB"
+        return 1
+    fi
+    setup_tunnel
+    return 0
+}
+
+orbic_ssh() {
+    if [ -n "$SSH_KEY" ]; then
+        ssh $SSH_OPTS -i "$SSH_KEY" -p $SSH_PORT root@127.0.0.1 "$@" 2>/dev/null
+    else
+        ssh $SSH_OPTS -p $SSH_PORT root@127.0.0.1 "$@" 2>/dev/null
+    fi
+}
+
+orbic_backdoor() {
+    echo "$@" | nc -w 30 127.0.0.1 $BACKDOOR_PORT 2>/dev/null
+}
+
+do_status() {
+    check_device || return 1
+    echo "=== Orbic NetCut Status ==="
+    orbic_ssh "export PATH=/usr/local/bin:\$PATH; netcut status"
+}
+
+do_attack() {
+    check_device || return 1
+    echo "[*] Starting attack (Ctrl+C to stop)..."
+    orbic_ssh "export PATH=/usr/local/bin:\$PATH; netcut attack"
+}
+
+do_scan() {
+    check_device || return 1
+    echo "[*] Scanning target network..."
+    orbic_ssh "export PATH=/usr/local/bin:\$PATH; netcut scan"
+}
+
+do_stop() {
+    check_device || return 1
+    echo "[*] Stopping attack..."
+    orbic_ssh "export PATH=/usr/local/bin:\$PATH; netcut stop"
+}
+
+do_config() {
+    SSID="$1"
+    PSK="$2"
+    if [ -z "$SSID" ] || [ -z "$PSK" ]; then
+        echo "Usage: folc config <ssid> <password>"
+        return 1
+    fi
+    check_device || return 1
+    echo "[*] Setting target: $SSID"
+    adb shell "echo 'SSID=\"$SSID\"' > /data/rayhunter/netcut.conf; echo 'PSK=\"$PSK\"' >> /data/rayhunter/netcut.conf; echo 'IFACE=\"wlan0\"' >> /data/rayhunter/netcut.conf"
+    echo "[+] Target configured: $SSID"
+}
+
+do_connect() {
+    check_device || return 1
+    echo "[*] Connecting to target network..."
+    CONF=$(adb shell "cat /data/rayhunter/netcut.conf 2>/dev/null")
+    SSID=$(echo "$CONF" | grep "^SSID=" | cut -d'"' -f2)
+    PSK=$(echo "$CONF" | grep "^PSK=" | cut -d'"' -f2)
+    if [ -z "$SSID" ]; then
+        echo "[-] No target configured. Run: folc config <ssid> <psk>"
+        return 1
+    fi
+    echo "[*] Target: $SSID"
+    orbic_backdoor "sh /data/rayhunter/netctl.sh join \"$SSID\" \"$PSK\""
+}
+
+do_disconnect() {
+    check_device || return 1
+    orbic_backdoor "sh /data/rayhunter/netctl.sh disconnect"
+    echo "[+] Disconnected"
+}
+
+do_boot() {
+    check_device || return 1
+    echo "[*] Running boot wrapper (kills services, connects WiFi)..."
+    orbic_backdoor "sh /data/rayhunter/wrapper_netcut.sh"
+    echo "[+] Boot complete. Run 'folc status' to check."
+}
+
+do_shell() {
+    check_device || return 1
+    echo "[*] Connecting to Orbic shell..."
+    if [ -n "$SSH_KEY" ]; then
+        ssh $SSH_OPTS -i "$SSH_KEY" -p $SSH_PORT -t root@127.0.0.1 "export PATH=/usr/local/bin:\$PATH; exec ash -l" 2>/dev/null
+    else
+        ssh $SSH_OPTS -p $SSH_PORT -t root@127.0.0.1 "export PATH=/usr/local/bin:\$PATH; exec ash -l" 2>/dev/null
+    fi
+}
+
+do_deploy() {
+    check_device || return 1
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    REPO="$(dirname "$SCRIPT_DIR")"
+    echo "[*] Deploying netcut system..."
+    if [ -f "$REPO/tools/deploy_netcut.sh" ]; then
+        sh "$REPO/tools/deploy_netcut.sh"
+    else
+        echo "[-] deploy_netcut.sh not found. Run from repo directory."
+    fi
+}
+
+do_activate() {
+    check_device || return 1
+    echo "[!] This will replace the boot wrapper. The device will use"
+    echo "    netcut mode on next reboot."
+    printf "    Continue? [y/N] "
+    read -r ans
+    case "$ans" in
+        y|Y)
+            adb shell "cp /data/rayhunter/wrapper_netcut.sh /data/rayhunter/rayhunter-daemon"
+            echo "[+] Activated. Reboot the Orbic to apply."
+            ;;
+        *)
+            echo "[-] Cancelled."
+            ;;
+    esac
+}
+
+do_revert() {
+    check_device || return 1
+    adb shell "cp /data/rayhunter/wrapper_v4.sh /data/rayhunter/rayhunter-daemon"
+    echo "[+] Reverted to original wrapper. Reboot to apply."
+}
+
+interactive_menu() {
+    while true; do
+        echo ""
+        echo "╔══════════════════════════════╗"
+        echo "║      FOLC NetCut v2          ║"
+        echo "╠══════════════════════════════╣"
+        echo "║  1) Status                   ║"
+        echo "║  2) Scan network             ║"
+        echo "║  3) Attack                   ║"
+        echo "║  4) Stop attack              ║"
+        echo "║  5) Configure target         ║"
+        echo "║  6) Connect to target        ║"
+        echo "║  7) Disconnect               ║"
+        echo "║  8) Shell                    ║"
+        echo "║  9) Boot (init services)     ║"
+        echo "║  d) Deploy to device         ║"
+        echo "║  a) Activate boot wrapper    ║"
+        echo "║  r) Revert boot wrapper      ║"
+        echo "║  q) Quit                     ║"
+        echo "╚══════════════════════════════╝"
+        printf "  > "
+        read -r choice
+        case "$choice" in
+            1) do_status ;;
+            2) do_scan ;;
+            3) do_attack ;;
+            4) do_stop ;;
+            5)
+                printf "  SSID: "; read -r ssid
+                printf "  PSK:  "; read -r psk
+                do_config "$ssid" "$psk"
+                ;;
+            6) do_connect ;;
+            7) do_disconnect ;;
+            8) do_shell ;;
+            9) do_boot ;;
+            d) do_deploy ;;
+            a) do_activate ;;
+            r) do_revert ;;
+            q) echo "Bye."; exit 0 ;;
+            *) echo "[-] Invalid option" ;;
+        esac
+    done
+}
+
+# CLI dispatch
+case "${1:-menu}" in
+    status)     check_device && do_status ;;
+    attack)     check_device && do_attack ;;
+    scan)       check_device && do_scan ;;
+    stop)       check_device && do_stop ;;
+    config)     do_config "$2" "$3" ;;
+    connect)    do_connect ;;
+    disconnect) do_disconnect ;;
+    shell)      do_shell ;;
+    boot)       do_boot ;;
+    deploy)     do_deploy ;;
+    activate)   do_activate ;;
+    revert)     do_revert ;;
+    menu|"")    interactive_menu ;;
+    *)
+        echo "Usage: folc [status|attack|scan|stop|config|connect|disconnect|shell|boot|deploy|activate|revert]"
+        exit 1
+        ;;
+esac

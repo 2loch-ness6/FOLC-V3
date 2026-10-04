@@ -4,6 +4,8 @@
 
 set -e  # Exit on error
 
+DEVICE="e830926d"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -87,9 +89,9 @@ fi
 print_step "Step 2: Checking Device Connection"
 
 echo "Waiting for device..."
-adb wait-for-device
+adb -s "$DEVICE" wait-for-device
 
-DEVICE_COUNT=$(adb devices | grep -c "device$" || true)
+DEVICE_COUNT=$(adb -s "$DEVICE" devices | grep -c "device$" || true)
 if [ "$DEVICE_COUNT" -eq 0 ]; then
     echo -e "${RED}✗ No device connected${NC}"
     echo "Please connect your Orbic Speed via USB"
@@ -99,7 +101,7 @@ fi
 echo -e "${GREEN}✓ Device connected${NC}"
 
 # Verify it's the right device
-DEVICE_MODEL=$(adb shell getprop ro.product.model 2>/dev/null | tr -d '\r')
+DEVICE_MODEL=$(adb -s "$DEVICE" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
 echo "Device Model: $DEVICE_MODEL"
 
 if [[ ! "$DEVICE_MODEL" =~ "RC400L" ]] && [[ ! "$DEVICE_MODEL" =~ "Orbic" ]]; then
@@ -114,12 +116,12 @@ fi
 print_step "Step 3: Verifying Root Exploit"
 
 echo "Checking for /bin/rootshell..."
-if adb shell "[ -f /bin/rootshell ]" 2>/dev/null; then
+if adb -s "$DEVICE" shell "[ -f /bin/rootshell ]" 2>/dev/null; then
     echo -e "${GREEN}✓ Root exploit found${NC}"
     
     # Test root access
     echo "Testing root access..."
-    ROOT_UID=$(adb shell "echo 'id -u' | /bin/rootshell" 2>/dev/null | tr -d '\r')
+    ROOT_UID=$(adb -s "$DEVICE" shell "echo 'id -u' | /bin/rootshell" 2>/dev/null | tr -d '\r')
     if [ "$ROOT_UID" = "0" ]; then
         echo -e "${GREEN}✓ Root access confirmed (UID 0)${NC}"
     else
@@ -135,7 +137,7 @@ fi
 # Step 4: Check disk space
 print_step "Step 4: Checking Disk Space"
 
-DATA_AVAIL=$(adb shell "df /data | tail -1 | awk '{print \$4}'" | tr -d '\r')
+DATA_AVAIL=$(adb -s "$DEVICE" shell "df /data | tail -1 | awk '{print \$4}'" | tr -d '\r')
 echo "Available space on /data: ${DATA_AVAIL}K"
 
 # Need at least 100MB for Alpine Linux
@@ -249,7 +251,7 @@ echo ""
 echo -e "${GREEN}✓ FOLC-V3 installation finished${NC}"
 echo ""
 echo "Next steps:"
-echo "  1. Test backdoor access: adb forward tcp:9999 tcp:9999; nc 127.0.0.1 9999"
+echo "  1. Test backdoor access: adb -s $DEVICE forward tcp:9999 tcp:9999; nc 127.0.0.1 9999"
 echo "  2. Check device screen for UI"
 echo "  3. Read the documentation: README.md and INSTALL.md"
 echo ""

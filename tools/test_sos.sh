@@ -9,6 +9,8 @@
 
 set -e
 
+DEVICE="e830926d"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -52,7 +54,7 @@ echo ""
 
 # Test 1: ADB Connection
 info "Test 1: Checking ADB connection..."
-if adb devices | grep -q "device$"; then
+if adb -s "$DEVICE" devices | grep -q "device$"; then
     test_passed "ADB connection working"
 else
     test_failed "No ADB device connected"
@@ -61,7 +63,7 @@ fi
 
 # Test 2: Root Access
 info "Test 2: Checking root access..."
-if adb shell "su -c 'id'" 2>/dev/null | grep -q "uid=0"; then
+if adb -s "$DEVICE" shell "su -c 'id'" 2>/dev/null | grep -q "uid=0"; then
     test_passed "Root access available"
 else
     test_failed "Root access not available"
@@ -70,7 +72,7 @@ fi
 
 # Test 3: SOS Manager Script
 info "Test 3: Checking SOS manager script..."
-if adb shell "su -c 'test -f /data/rayhunter/sos_manager.sh'" 2>/dev/null; then
+if adb -s "$DEVICE" shell "su -c 'test -f /data/rayhunter/sos_manager.sh'" 2>/dev/null; then
     test_passed "SOS manager script exists"
 else
     test_failed "SOS manager script not found"
@@ -78,7 +80,7 @@ fi
 
 # Test 4: Hardware Control Daemon
 info "Test 4: Checking hardware control daemon..."
-if adb shell "su -c 'test -f /data/rayhunter/hw_ctl_daemon.py'" 2>/dev/null; then
+if adb -s "$DEVICE" shell "su -c 'test -f /data/rayhunter/hw_ctl_daemon.py'" 2>/dev/null; then
     test_passed "Hardware control daemon exists"
 else
     test_failed "Hardware control daemon not found"
@@ -86,7 +88,7 @@ fi
 
 # Test 5: API Gateway Daemon
 info "Test 5: Checking API gateway daemon..."
-if adb shell "su -c 'test -f /data/rayhunter/api_gateway_daemon.py'" 2>/dev/null; then
+if adb -s "$DEVICE" shell "su -c 'test -f /data/rayhunter/api_gateway_daemon.py'" 2>/dev/null; then
     test_passed "API gateway daemon exists"
 else
     test_failed "API gateway daemon not found"
@@ -94,12 +96,12 @@ fi
 
 # Test 6: Alpine Chroot
 info "Test 6: Checking Alpine chroot..."
-if adb shell "su -c 'test -d /data/alpine'" 2>/dev/null; then
+if adb -s "$DEVICE" shell "su -c 'test -d /data/alpine'" 2>/dev/null; then
     test_passed "Alpine chroot exists"
     
     # Test 7: AI Orchestrator
     info "Test 7: Checking AI orchestrator..."
-    if adb shell "su -c 'test -f /data/alpine/usr/local/bin/ai_orchestrator.py'" 2>/dev/null; then
+    if adb -s "$DEVICE" shell "su -c 'test -f /data/alpine/usr/local/bin/ai_orchestrator.py'" 2>/dev/null; then
         test_passed "AI orchestrator exists"
     else
         test_failed "AI orchestrator not found"
@@ -111,7 +113,7 @@ fi
 
 # Test 8: Start SOS Services
 info "Test 8: Starting SOS services..."
-if adb shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh start'" 2>/dev/null; then
+if adb -s "$DEVICE" shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh start'" 2>/dev/null; then
     test_passed "SOS services started"
     sleep 3
 else
@@ -120,7 +122,7 @@ fi
 
 # Test 9: Check Service Status
 info "Test 9: Checking service status..."
-STATUS_OUTPUT=$(adb shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh status'" 2>/dev/null)
+STATUS_OUTPUT=$(adb -s "$DEVICE" shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh status'" 2>/dev/null)
 echo "$STATUS_OUTPUT"
 
 if echo "$STATUS_OUTPUT" | grep -q "RUNNING"; then
@@ -131,7 +133,7 @@ fi
 
 # Test 10: API Health Check
 info "Test 10: Testing API health endpoint..."
-adb forward tcp:8888 tcp:8888 2>/dev/null
+adb -s "$DEVICE" forward tcp:8888 tcp:8888 2>/dev/null
 sleep 2
 
 if command -v curl &> /dev/null; then
@@ -172,21 +174,21 @@ fi
 
 # Test 13: Log Files
 info "Test 13: Checking log files..."
-if adb shell "su -c 'test -f /data/rayhunter/hw_ctl_daemon.log'" 2>/dev/null; then
+if adb -s "$DEVICE" shell "su -c 'test -f /data/rayhunter/hw_ctl_daemon.log'" 2>/dev/null; then
     test_passed "Hardware daemon log exists"
     
     # Show last 5 lines
     info "Last 5 lines of hardware daemon log:"
-    adb shell "su -c 'tail -5 /data/rayhunter/hw_ctl_daemon.log'" 2>/dev/null | sed 's/^/  /'
+    adb -s "$DEVICE" shell "su -c 'tail -5 /data/rayhunter/hw_ctl_daemon.log'" 2>/dev/null | sed 's/^/  /'
 fi
 
-if adb shell "su -c 'test -f /data/rayhunter/api_gateway_daemon.log'" 2>/dev/null; then
+if adb -s "$DEVICE" shell "su -c 'test -f /data/rayhunter/api_gateway_daemon.log'" 2>/dev/null; then
     test_passed "API gateway log exists"
 fi
 
 # Test 14: Configuration Files
 info "Test 14: Checking configuration files..."
-if adb shell "su -c 'test -f /data/alpine/etc/sos/ai_config.json'" 2>/dev/null; then
+if adb -s "$DEVICE" shell "su -c 'test -f /data/alpine/etc/sos/ai_config.json'" 2>/dev/null; then
     test_passed "AI configuration file exists"
 else
     warn "AI configuration not found (optional)"
@@ -207,7 +209,7 @@ if [ $FAILED -eq 0 ]; then
     log "SOS is ready to use"
     echo ""
     echo "Next steps:"
-    echo "  1. Forward API port: adb forward tcp:8888 tcp:8888"
+    echo "  1. Forward API port: adb -s $DEVICE forward tcp:8888 tcp:8888"
     echo "  2. Test API: curl http://127.0.0.1:8888/api/health"
     echo "  3. Configure AI keys (if needed)"
     echo "  4. See docs/SOS_QUICKSTART.md for usage"

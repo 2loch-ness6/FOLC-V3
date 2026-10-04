@@ -9,6 +9,7 @@
 
 set -e
 
+DEVICE="e830926d"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SOS_SRC="$PROJECT_ROOT/src/sos"
@@ -37,7 +38,10 @@ check_adb() {
         error "ADB not found. Please install Android Debug Bridge."
     fi
     
-    if ! adb devices | grep -q "device$"; then
+    log "Waiting for device..."
+    adb -s "$DEVICE" wait-for-device
+    
+    if ! adb -s "$DEVICE" devices | grep -q "device$"; then
         error "No device connected. Please connect Orbic Speed device."
     fi
     
@@ -46,7 +50,7 @@ check_adb() {
 
 check_root() {
     log "Checking root access..."
-    if ! adb shell "su -c 'id'" 2>/dev/null | grep -q "uid=0"; then
+    if ! adb -s "$DEVICE" shell "su -c 'id'" 2>/dev/null | grep -q "uid=0"; then
         error "Root access not available. Please root the device first."
     fi
     log "Root access confirmed"
@@ -56,17 +60,17 @@ deploy_native_daemons() {
     log "Deploying native environment daemons..."
     
     # Create directory structure
-    adb shell "su -c 'mkdir -p /data/rayhunter'"
+    adb -s "$DEVICE" shell "su -c 'mkdir -p /data/rayhunter'"
     
     # Push daemon files
-    adb push "$SOS_SRC/daemons/hw_ctl_daemon.py" /data/rayhunter/
-    adb push "$SOS_SRC/daemons/api_gateway_daemon.py" /data/rayhunter/
-    adb push "$SOS_SRC/sos_manager.sh" /data/rayhunter/
+    adb -s "$DEVICE" push "$SOS_SRC/daemons/hw_ctl_daemon.py" /data/rayhunter/
+    adb -s "$DEVICE" push "$SOS_SRC/daemons/api_gateway_daemon.py" /data/rayhunter/
+    adb -s "$DEVICE" push "$SOS_SRC/sos_manager.sh" /data/rayhunter/
     
     # Set permissions
-    adb shell "su -c 'chmod +x /data/rayhunter/hw_ctl_daemon.py'"
-    adb shell "su -c 'chmod +x /data/rayhunter/api_gateway_daemon.py'"
-    adb shell "su -c 'chmod +x /data/rayhunter/sos_manager.sh'"
+    adb -s "$DEVICE" shell "su -c 'chmod +x /data/rayhunter/hw_ctl_daemon.py'"
+    adb -s "$DEVICE" shell "su -c 'chmod +x /data/rayhunter/api_gateway_daemon.py'"
+    adb -s "$DEVICE" shell "su -c 'chmod +x /data/rayhunter/sos_manager.sh'"
     
     log "Native daemons deployed successfully"
 }
@@ -75,23 +79,23 @@ deploy_alpine_services() {
     log "Deploying Alpine chroot AI services..."
     
     # Check if Alpine is installed
-    if ! adb shell "su -c 'test -d /data/alpine'" 2>/dev/null; then
+    if ! adb -s "$DEVICE" shell "su -c 'test -d /data/alpine'" 2>/dev/null; then
         warn "Alpine Linux not found. Skipping Alpine deployment."
         warn "Please install Alpine Linux first using setup.sh"
         return
     fi
     
     # Create Alpine directories
-    adb shell "su -c 'mkdir -p /data/alpine/usr/local/bin'"
-    adb shell "su -c 'mkdir -p /data/alpine/etc/sos'"
-    adb shell "su -c 'mkdir -p /data/alpine/var/log'"
+    adb -s "$DEVICE" shell "su -c 'mkdir -p /data/alpine/usr/local/bin'"
+    adb -s "$DEVICE" shell "su -c 'mkdir -p /data/alpine/etc/sos'"
+    adb -s "$DEVICE" shell "su -c 'mkdir -p /data/alpine/var/log'"
     
     # Push AI orchestrator
-    adb push "$SOS_SRC/ai/ai_orchestrator.py" /data/alpine/usr/local/bin/
-    adb shell "su -c 'chmod +x /data/alpine/usr/local/bin/ai_orchestrator.py'"
+    adb -s "$DEVICE" push "$SOS_SRC/ai/ai_orchestrator.py" /data/alpine/usr/local/bin/
+    adb -s "$DEVICE" shell "su -c 'chmod +x /data/alpine/usr/local/bin/ai_orchestrator.py'"
     
     # Push configuration
-    adb push "$SOS_SRC/config/ai_config.json" /data/alpine/etc/sos/
+    adb -s "$DEVICE" push "$SOS_SRC/config/ai_config.json" /data/alpine/etc/sos/
     
     log "Alpine services deployed successfully"
 }
@@ -123,7 +127,7 @@ integrate_with_wrapper() {
     log "Integrating SOS with system initialization..."
     
     # Check if wrapper_v4.sh exists
-    if ! adb shell "su -c 'test -f /data/rayhunter/wrapper_v4.sh'" 2>/dev/null; then
+    if ! adb -s "$DEVICE" shell "su -c 'test -f /data/rayhunter/wrapper_v4.sh'" 2>/dev/null; then
         warn "wrapper_v4.sh not found. SOS will need to be started manually."
         return
     fi
@@ -140,7 +144,7 @@ test_deployment() {
     log "Testing SOS deployment..."
     
     # Test if files exist
-    if ! adb shell "su -c 'test -f /data/rayhunter/sos_manager.sh'" 2>/dev/null; then
+    if ! adb -s "$DEVICE" shell "su -c 'test -f /data/rayhunter/sos_manager.sh'" 2>/dev/null; then
         error "Deployment verification failed"
     fi
     
@@ -148,13 +152,13 @@ test_deployment() {
     
     # Try to start services
     log "Attempting to start SOS services..."
-    adb shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh start'" 2>/dev/null || warn "Failed to start services automatically"
+    adb -s "$DEVICE" shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh start'" 2>/dev/null || warn "Failed to start services automatically"
     
     sleep 3
     
     # Check status
     log "Checking SOS status..."
-    adb shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh status'"
+    adb -s "$DEVICE" shell "su -c '/bin/sh /data/rayhunter/sos_manager.sh status'"
 }
 
 show_usage() {
@@ -163,13 +167,13 @@ show_usage() {
     echo ""
     echo "Usage:"
     echo "------"
-    echo "Start SOS:   adb shell \"su -c '/bin/sh /data/rayhunter/sos_manager.sh start'\""
-    echo "Stop SOS:    adb shell \"su -c '/bin/sh /data/rayhunter/sos_manager.sh stop'\""
-    echo "Status:      adb shell \"su -c '/bin/sh /data/rayhunter/sos_manager.sh status'\""
+    echo "Start SOS:   adb -s $DEVICE shell \"su -c '/bin/sh /data/rayhunter/sos_manager.sh start'\""
+    echo "Stop SOS:    adb -s $DEVICE shell \"su -c '/bin/sh /data/rayhunter/sos_manager.sh stop'\""
+    echo "Status:      adb -s $DEVICE shell \"su -c '/bin/sh /data/rayhunter/sos_manager.sh status'\""
     echo ""
     echo "AI Interactive Mode:"
     echo "-------------------"
-    echo "adb shell \"su -c 'chroot /data/alpine /usr/local/bin/ai_orchestrator.py --interactive'\""
+    echo "adb -s $DEVICE shell \"su -c 'chroot /data/alpine /usr/local/bin/ai_orchestrator.py --interactive'\""
     echo ""
     echo "API Endpoints:"
     echo "-------------"

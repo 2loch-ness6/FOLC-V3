@@ -32,7 +32,7 @@
 - [ ] Task: Conductor - User Manual Verification 'AutoIOT & Global Scan Engine' (Protocol in workflow.md)
 
 ## Phase 4: AI Orchestration (Nexus Gemini Port)
-- [ ] Task: Patch Gemini CLI for Automation
+- [~] Task: Patch Gemini CLI for Automation
     - [ ] Clone and modify Gemini CLI to pipe I/O to the SOS orchestrator
     - [ ] Create `src/sos/ai/nexus_orchestrator.py`
 - [ ] Task: Implement Turn-to-Turn Orchestration Loop
