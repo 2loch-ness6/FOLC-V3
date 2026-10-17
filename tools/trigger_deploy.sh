@@ -4,7 +4,7 @@
 # Stages files and triggers the Native Host Script.
 
 DEPLOY_DIR="/sdcard/ORBIC_DEPLOY"
-HOST_SCRIPT="orbic_deploy.sh"
+HOST_SCRIPT="orbic_deploy_agent.sh"
 
 echo "[*] Staging files to $DEPLOY_DIR..."
 
@@ -12,10 +12,10 @@ echo "[*] Staging files to $DEPLOY_DIR..."
 nsenter -t 1 -m /system/bin/sh -c "mkdir -p $DEPLOY_DIR"
 
 # Copy files (Kali -> SDCard)
-cp foac_ui_v6.py "$DEPLOY_DIR/"
-cp foac_core.py "$DEPLOY_DIR/"
-cp start_foac_v2.sh "$DEPLOY_DIR/"
-cp orbic_deploy.sh "$DEPLOY_DIR/"
+cp folc_ui.py "$DEPLOY_DIR/"
+cp folc_core.py "$DEPLOY_DIR/"
+cp start_folc.sh "$DEPLOY_DIR/"
+cp tools/orbic_deploy_agent.sh "$DEPLOY_DIR/"
 
 echo "[*] Files staged."
 

@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+# FOLC Client (Host Side)
+# Replaces ADB command line interface
+
+import socket
+import struct
+import sys
+import os
+import argparse
+
+# Default IP (USB Tethering Gateway usually ends in .1)
+# We will need to detect this or allow override
+DEFAULT_IP = "192.168.42.129" # Common RNDIS IP, will auto-detect later
+PORT = 5000
+
+def send_request(sock, action, data):
+    payload = f"{action} {data}".encode('utf-8')
+    sock.sendall(struct.pack("!I", len(payload)))
+    sock.sendall(payload)
+
+def send_file(sock, local_path, remote_path):
+    filesize = os.path.getsize(local_path)
+    header = f"PUSH {remote_path} {filesize}"
+    
+    # Send Header
+    sock.sendall(struct.pack("!I", len(header)))
+    sock.sendall(header.encode('utf-8'))
+    
+    # Send Body
+    with open(local_path, 'rb') as f:
+        while True:
+            chunk = f.read(4096)
+            if not chunk: break
+            sock.sendall(chunk)
+
+def read_response(sock):
+    header = sock.recv(4)
+    if not header: return None
+    resp_len = struct.unpack("!I", header)[0]
+    
+    response = b""
+    while len(response) < resp_len:
+        chunk = sock.recv(min(4096, resp_len - len(response)))
+        if not chunk: break
+        response += chunk
+        
+    return response
+
+def main():
+    parser = argparse.ArgumentParser(description="FOLC Bridge Client")
+    parser.add_argument("--ip", help="Device IP Address", default=os.environ.get("FOLC_IP"))
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    
+    # Shell
+    shell_parser = subparsers.add_parser("shell", help="Run command")
+    shell_parser.add_argument("cmd", nargs=argparse.REMAINDER)
+    
+    # Push
+    push_parser = subparsers.add_parser("push", help="Push file")
+    push_parser.add_argument("local", help="Local path")
+    push_parser.add_argument("remote", help="Remote path")
+    
+    args = parser.parse_args()
+    
+    target_ip = args.ip
+    if not target_ip:
+        # Try to guess from default route?
+        # For now require IP
+        print("Error: --ip or FOLC_IP env var required")
+        sys.exit(1)
+        
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((target_ip, PORT))
+        
+        if args.command == "shell":
+            cmd_str = " ".join(args.cmd)
+            send_request(sock, "EXEC", cmd_str)
+            resp = read_response(sock)
+            
+            if resp.startswith(b"OK"):
+                print(resp[2:].decode('utf-8', errors='ignore'), end='')
+            else:
+                print(f"Remote Error: {resp[3:].decode('utf-8', errors='ignore')}")
+                sys.exit(1)
+                
+        elif args.command == "push":
+            send_file(sock, args.local, args.remote)
+            resp = read_response(sock)
+            if resp == b"OK":
+                print(f"Pushed {args.local} -> {args.remote}")
+            else:
+                print(f"Failed: {resp}")
+                
+    except Exception as e:
+        print(f"Connection Error: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

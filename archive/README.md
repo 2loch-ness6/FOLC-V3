@@ -26,7 +26,7 @@ These are preserved for:
 | `foac_ui_v4.py` | Improved rendering | Superseded by v6 |
 | `foac_ui_v5.py` | Context menu addition | Superseded by v6 |
 
-**Current:** `/src/ui/foac_ui_v6.py` is the active version.
+**Current:** `/src/ui/folc_ui.py` is the active version.
 
 ### Test Scripts
 
@@ -82,7 +82,7 @@ cp archive/foac_ui_v3.py /tmp/test_ui.py
 less archive/flipper.pl
 
 # Compare with current version
-diff archive/foac_ui_v5.py src/ui/foac_ui_v6.py
+diff archive/foac_ui_v5.py src/ui/folc_ui.py
 ```
 
 **Do NOT deploy these to your device** unless you know what you're doing!

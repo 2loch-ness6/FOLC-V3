@@ -235,12 +235,20 @@ fi
 
 if [ "$DO_UI" = true ]; then
     print_step "Installing UI"
-    if [ -f "$SCRIPT_DIR/deploy_foac.sh" ]; then
-        bash "$SCRIPT_DIR/deploy_foac.sh"
+    if [ -f "$SCRIPT_DIR/deploy_folc.sh" ]; then
+        bash "$SCRIPT_DIR/deploy_folc.sh"
     else
-        echo -e "${YELLOW}⚠ deploy_foac.sh not found${NC}"
+        echo -e "${YELLOW}⚠ deploy_folc.sh not found${NC}"
     fi
 fi
+
+# New Step: Install Network Bridge
+print_step "Installing Network Bridge"
+echo "Pushing bridge server..."
+adb push "$SCRIPT_DIR/folc_bridge_server.py" /data/rayhunter/
+adb shell "chmod +x /data/rayhunter/folc_bridge_server.py"
+echo "Bridge server installed. To start it manually:"
+echo "  adb shell 'python3 /data/rayhunter/folc_bridge_server.py &'"
 
 # Final steps
 print_step "Installation Complete!"

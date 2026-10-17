@@ -5,19 +5,20 @@ import os
 import time
 import atexit
 import hashlib
+import socket
 
 # Configuration
-# We use the HOST ADB binary via nsenter to ensure connection stability
-# and avoid conflicts between container/host adb servers.
-ADB_BIN = "nsenter -t 1 -m /bin/adb" 
+ADB_BIN = "adb" 
 VERBOSE = True 
+BACKDOOR_PORT = 9999
 
 # Map local files to device paths
 # Note: Local paths are relative to repository root
 LOCAL_FILES = {
-    "src/ui/foac_ui_v6.py": "/data/alpine/root/foac_ui_v6.py",
-    "src/core/foac_core.py": "/data/alpine/root/foac_core.py",
-    "tools/start_foac_v2.sh": "/data/rayhunter/start_foac_v2.sh"
+    "src/ui/folc_ui.py": "/data/alpine/root/folc_ui.py",
+    "src/core/folc_core.py": "/data/alpine/root/folc_core.py",
+    "tools/start_folc.sh": "/data/rayhunter/start_folc.sh",
+    "exploits/wrapper_v4.sh": "/data/rayhunter/wrapper_v4.sh"
 }
 
 def log(msg, level="INFO"):
@@ -33,21 +34,8 @@ def log(msg, level="INFO"):
     print(f"{color}[{level}] {msg}{colors['END']}")
 
 def cleanup():
-    log("Cleaning up ADB Bridge...", "INFO")
-    
-    # 1. Kill Container ADB (if any)
-    subprocess.run(["pkill", "adb"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
-    # 2. Kill Host ADB Server (The big hammer)
-    try:
-        # Kill process directly on host
-        subprocess.run(["nsenter", "-t", "1", "-m", "pkill", "adb"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        # Polite kill
-        cmd = ADB_BIN.split() + ["kill-server"]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except: pass
-    
-    log("ADB Cleanup Complete.", "INFO")
+    # Only kill forward on exit if needed, but we keep it for user convenience usually
+    pass
 
 def calculate_local_md5(file_path):
     hash_md5 = hashlib.md5()
@@ -61,12 +49,11 @@ def calculate_local_md5(file_path):
         return None
 
 def run_adb(args, check=True, stdin=None, retries=3):
-    # Split ADB_BIN correctly
-    cmd = ADB_BIN.split() + args
+    cmd = [ADB_BIN] + args
     
     for attempt in range(retries):
         if VERBOSE:
-            log(f"EXEC (Attempt {attempt+1}/{retries}): {' '.join(cmd)}", "CMD")
+            log(f"ADB EXEC (Attempt {attempt+1}/{retries}): {' '.join(cmd)}", "CMD")
             
         result = subprocess.run(cmd, capture_output=True, text=(stdin is None), input=stdin)
         
@@ -76,62 +63,67 @@ def run_adb(args, check=True, stdin=None, retries=3):
             if result.stderr:
                 log(f"STDERR: {result.stderr.strip()}", "DBG")
         
-        # ADB is flaky. If it returns 0, great.
         if result.returncode == 0:
             return result
         
-        # If not, wait and retry
         time.sleep(1)
     
     if check and result.returncode != 0:
-        log(f"Command Failed after {retries} attempts: {' '.join(cmd)}", "ERR")
-        log(f"Stderr: {result.stderr}", "ERR")
+        log(f"ADB Command Failed: {' '.join(cmd)}", "ERR")
     return result
 
-def revive_backdoor():
-    log("Reviving 'Real Root' Backdoor (via SUID)...", "WARN")
-    cmd = "nohup /bin/busybox nc -ll -p 9999 -e /bin/sh >/dev/null 2>&1 &"
-    safe_cmd = cmd.replace("'", "'\\''")
-    adb_args = ["shell", f"echo '{safe_cmd}' | /bin/rootshell"]
-    run_adb(adb_args, check=False)
-    time.sleep(2)
+def ensure_adb_forward():
+    log("Setting up ADB Forwarding...", "INFO")
+    run_adb(["forward", f"tcp:{BACKDOOR_PORT}", f"tcp:{BACKDOOR_PORT}"])
 
 def run_root_cmd(cmd_str):
-    safe_cmd = cmd_str.replace("'", "'\\''")
-    
-    # Attempt 1: Direct Netcat (Host -> Device Port 9999)
-    # We must pipe into nc on the device because we are using nsenter (Host context)
-    # Host ADB -> ADB Shell -> echo | nc localhost 9999
-    adb_args = ["shell", f"echo '{safe_cmd}' | nc -w 2 127.0.0.1 9999"]
-    
+    """
+    Executes a command via the device backdoor (port 9999) using a direct socket from Host.
+    Uses a one-shot connection: Connect -> Send -> Read All -> Close.
+    """
     if VERBOSE:
-        log(f"ROOT EXEC: {cmd_str}", "CMD")
-        
-    res = run_adb(adb_args, check=False)
-    
-    err_out = res.stderr or ""
-    if "Connection refused" in err_out or "can't connect" in (res.stdout or ""):
-        log("Backdoor unreachable. Attempting revive...", "WARN")
-        revive_backdoor()
-        return run_adb(adb_args, check=False)
-        
-    return res
+        log(f"ROOT EXEC (Socket): {cmd_str}", "CMD")
+
+    output = b""
+    try:
+        with socket.create_connection(("127.0.0.1", BACKDOOR_PORT), timeout=5) as sock:
+            # We append "; exit" to ensure the remote shell closes the connection when done.
+            # This triggers the socket close on our end, breaking the recv loop naturally.
+            sock.sendall(f"{cmd_str}; exit\n".encode())
+            
+            while True:
+                try:
+                    chunk = sock.recv(4096)
+                    if not chunk: break
+                    output += chunk
+                except socket.timeout:
+                    break
+                    
+    except ConnectionRefusedError:
+        log("Backdoor connection refused! Is the device connected and rooted?", "ERR")
+        return None
+    except Exception as e:
+        log(f"Socket Error: {e}", "ERR")
+        return None
+
+    return output.decode(errors='ignore').strip()
 
 def verify_remote_file(remote_path, expected_md5):
     log(f"  > Verifying integrity of {remote_path}...", "DBG")
-    res = run_root_cmd(f"md5sum {remote_path}")
-    output = res.stdout.strip() if res.stdout else ""
+    out = run_root_cmd(f"md5sum {remote_path}")
     
-    if not output or len(output.split()) < 1:
-        log("    > Verification Failed: No output from md5sum", "ERR")
+    if not out:
+        log("    > Verification Failed: No output from backdoor", "ERR")
         return False
         
-    remote_hash = output.split()[0]
+    # Output format: "md5hash  filename"
+    remote_hash = out.split()[0]
+    
     if remote_hash == expected_md5:
         log(f"    > Checksum MATCH: {remote_hash}", "DBG")
         return True
     else:
-        log(f"    > Checksum MISMATCH!", "ERR")
+        log(f"    > Checksum MISMATCH! Got: {remote_hash}, Expected: {expected_md5}", "ERR")
         return False
 
 def push_file(local_path, remote_path):
@@ -143,26 +135,26 @@ def push_file(local_path, remote_path):
 
     local_md5 = calculate_local_md5(local_path)
     if not local_md5: return
-
-    # 2. Push to temp via STREAM (Host ADB cannot see Container files directly)
-    # We read local file in Python (Container), pipe to ADB (Host) -> Shell (Device)
-    tmp_path = f"/data/local/tmp/{os.path.basename(local_path)}"
-    log(f"  > Streaming to {tmp_path} (Host Bridge)...", "DBG")
     
-    try:
-        with open(local_path, 'rb') as f:
-            content = f.read()
-    except:
+    # 1. Check if update is needed (compare MD5)
+    # We blindly push if we can't verify, or if hash differs
+    if verify_remote_file(remote_path, local_md5):
+        log("    > File is up to date. Skipping.", "INFO")
         return
 
-    # adb shell "cat > remote"
-    res = run_adb(["shell", f"cat > {tmp_path}"], stdin=content)
+    # 2. Push to temp via ADB PUSH (Fast & Reliable)
+    # Note: ADB Push goes to /data/local/tmp/
+    filename = os.path.basename(local_path)
+    tmp_path = f"/data/local/tmp/{filename}"
+    
+    log(f"  > Pushing to {tmp_path}...", "DBG")
+    res = run_adb(["push", local_path, tmp_path])
     
     if res.returncode == 0:
-        log(f"  > Installing to destination (ROOT)...", "DBG")
-        # Copy from tmp to final, chmod, remove tmp
-        root_op = f"cat {tmp_path} > {remote_path} && chmod +x {remote_path} && rm {tmp_path}"
-        run_root_cmd(root_op)
+        log(f"  > Moving to destination (ROOT)...", "DBG")
+        # Move and Chmod via Backdoor
+        cmd = f"cp {tmp_path} {remote_path} && chmod 755 {remote_path} && rm {tmp_path}"
+        run_root_cmd(cmd)
         
         # Verify
         if verify_remote_file(remote_path, local_md5):
@@ -170,49 +162,32 @@ def push_file(local_path, remote_path):
         else:
              log(f"FAILED: Validation failed for {remote_path}", "ERR")
     else:
-        log("FAILED during stream push", "ERR")
+        log("FAILED during adb push", "ERR")
 
 def wait_for_device():
     log("Waiting for device connection...", "INFO")
     while True:
-        # Check connection using Host ADB
         res = run_adb(["devices"], check=False, retries=1)
         output = res.stdout.strip() if res.stdout else ""
         if "\tdevice" in output:
             log(f"Device found.", "INFO")
+            ensure_adb_forward()
             return
         time.sleep(3)
 
 def hard_reboot():
-    log("Hard Rebooting device (ROOT)...", "WARN")
-    
-    reboot_cmds = [
-        "/sbin/reboot",
-        "busybox reboot -f",
-        "killall -9 cpe_daemon" # The Panic Button
-    ]
-    
-    for cmd in reboot_cmds:
-        log(f"  > Attempting: {cmd}", "DBG")
-        run_root_cmd(cmd)
-        time.sleep(2)
-        res = run_adb(["devices"], check=False)
-        if "\tdevice" not in (res.stdout or ""):
-            log("  > Device went offline.", "INFO")
-            break
-    
-    log("Waiting for device to go offline...", "INFO")
-    time.sleep(5)
-    wait_for_device()
-    time.sleep(10)
+    # Only if requested
+    pass
 
 def flash_files():
-    log("Starting Flash Process...", "INFO")
+    log("Starting Sync Process...", "INFO")
+    ensure_adb_forward()
     for local, remote in LOCAL_FILES.items():
         push_file(local, remote)
 
 def verify_installation():
     log("Verifying Installation...", "INFO")
+    ensure_adb_forward()
     all_good = True
     for local, remote in LOCAL_FILES.items():
         local_md5 = calculate_local_md5(local)
@@ -224,38 +199,30 @@ def verify_installation():
     return all_good
 
 def main():
-    cleanup() # Initial aggressive cleanup
-    atexit.register(cleanup)
-    
     if "--shell" in sys.argv:
-        log("::: ORBIC ROOT SHELL (Host Bridge) :::", "WARN")
+        log("::: ORBIC ROOT SHELL (Socket) :::", "WARN")
         wait_for_device()
-        run_adb(["forward", "tcp:9999", "tcp:9999"])
-        log("Connecting to Backdoor...", "INFO")
-        # Use Host NC if possible, or container NC?
-        # Container NC -> Host Port 9999 (mapped via adb forward)
-        # localhost in container != localhost on host.
-        # ADB forward binds to Host Localhost.
-        # We need to access Host Localhost.
-        # This is tricky. simpler to use interactive shell via ADB
-        subprocess.run(ADB_BIN.split() + ["shell", "/bin/rootshell"])
+        try:
+            while True:
+                cmd = input("# ")
+                if cmd == "exit": break
+                print(run_root_cmd(cmd))
+        except KeyboardInterrupt:
+            print("\nExiting.")
         return
 
-    log("::: ORBIC MANAGER v6.0 (Host Stability) :::", "INFO")
+    log("::: ORBIC MANAGER v7.0 (Socket Edition) :::", "INFO")
     
-    log("--- STEP 1: INITIAL REBOOT ---", "WARN")
     wait_for_device()
-    hard_reboot()
     
-    log("--- STEP 2: FLASHING UPDATES ---", "WARN")
+    log("--- STEP 1: SYNC FILES ---", "WARN")
     flash_files()
     
-    log("--- STEP 3: POST-FLASH REBOOT ---", "WARN")
-    hard_reboot()
-    
-    log("--- STEP 4: VERIFICATION ---", "WARN")
+    log("--- STEP 2: FINAL VERIFICATION ---", "WARN")
     if verify_installation():
         log("✓ UPDATE SUCCESSFUL", "INFO")
+        log("Rebooting device to apply changes...", "WARN")
+        run_root_cmd("/sbin/reboot")
     else:
         log("X UPDATE FAILED CHECK", "ERR")
         sys.exit(1)

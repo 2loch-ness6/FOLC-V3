@@ -10,8 +10,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 # Import functional core
 try:
-    import foac_core
-    WIFI = foac_core.WirelessTool("wlan0")
+    import folc_core
+    WIFI = folc_core.WirelessTool("wlan0")
 except ImportError:
     WIFI = None
 

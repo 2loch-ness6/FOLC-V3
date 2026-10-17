@@ -18,9 +18,9 @@ LOGFILE="$WORKDIR/deploy_native.log"
     echo "=========================================="
 
     # 1. DEFINE TARGETS
-    TARGET_UI="/data/alpine/root/foac_ui_v6.py"
-    TARGET_CORE="/data/alpine/root/foac_core.py"
-    TARGET_SVC="/data/rayhunter/start_foac_v2.sh"
+    TARGET_UI="/data/alpine/root/folc_ui.py"
+    TARGET_CORE="/data/alpine/root/folc_core.py"
+    TARGET_SVC="/data/rayhunter/start_folc.sh"
 
     # 2. FLUSH/REMOUNT (Just in case)
     mount -o remount,rw /data
@@ -62,9 +62,9 @@ LOGFILE="$WORKDIR/deploy_native.log"
     }
 
     echo "--- STEP 1: FLASHING FILES ---"
-    install_file "foac_ui_v6.py" "$TARGET_UI"
-    install_file "foac_core.py" "$TARGET_CORE"
-    install_file "start_foac_v2.sh" "$TARGET_SVC"
+    install_file "folc_ui.py" "$TARGET_UI"
+    install_file "folc_core.py" "$TARGET_CORE"
+    install_file "start_folc.sh" "$TARGET_SVC"
 
     echo "--- STEP 2: VERIFICATION COMPLETE ---"
     echo "All files match source. System is ready for reboot."
