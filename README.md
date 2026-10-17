@@ -132,9 +132,8 @@ FOLC-V3/
 │   ├── QUICK_REFERENCE.md   # Command quick reference
 │   ├── PROJECT_SUMMARY.md   # Detailed project analysis
 │   ├── FRONTDOOR.md         # Frontdoor root implementation
+│   ├── archive/             # Deprecated/historical phase docs + archived conductor planning
 │   └── ...                  # Original research docs
-├── archive/             # Deprecated/historical files
-│   └── README.md            # Archive explanation
 ├── ksu.c                # SUID root binary source
 ├── nosetuid.c           # ADB root persistence library
 ├── Makefile             # Build system for native binaries
